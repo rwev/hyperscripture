@@ -1,10 +1,11 @@
 import { memo } from 'react';
+import { makeVerseId } from '../utils/bible';
 
 /**
  * A single Bible verse with cross-reference indicator.
  */
 const Verse = memo(function Verse({ bookAbbr, chapter, verse, text, hasRefs, refCount, isSelected, onSelect }) {
-  const verseId = `${bookAbbr}.${chapter}.${verse}`;
+  const verseId = makeVerseId(bookAbbr, chapter, verse);
 
   return (
     <span

@@ -20,20 +20,12 @@ export async function loadMeta() {
   return _meta;
 }
 
-export function getMeta() {
-  return _meta;
-}
-
 export function getBooks() {
   return _booksByIndex;
 }
 
 export function getBookByAbbr(abbr) {
   return _booksByAbbr[abbr] || null;
-}
-
-export function getBookByIndex(index) {
-  return _booksByIndex[index] || null;
 }
 
 export function getNextBook(abbr) {
@@ -54,7 +46,7 @@ export function getPrevBook(abbr) {
  * Parse a verse reference string like "Gen.1.1" or "1John.3.16"
  * Returns { book, chapter, verse } or null.
  */
-export function parseVerseId(id) {
+function parseVerseId(id) {
   if (!id) return null;
   const parts = id.split('.');
   if (parts.length < 3) return null;
@@ -79,7 +71,6 @@ export function parseReference(ref) {
     return { book: start.book, chapter: start.chapter, verseStart: start.verse, verseEnd: start.verse };
   }
 
-  // Range: "John.1.1-John.1.3" or potentially "John.1.1-3"
   const endPart = rangeParts.slice(1).join('-');
   const end = parseVerseId(endPart);
 
@@ -87,7 +78,6 @@ export function parseReference(ref) {
     return { book: start.book, chapter: start.chapter, verseStart: start.verse, verseEnd: end.verse };
   }
 
-  // Maybe just a verse number like "3"
   const endVerse = parseInt(endPart, 10);
   if (!isNaN(endVerse)) {
     return { book: start.book, chapter: start.chapter, verseStart: start.verse, verseEnd: endVerse };
@@ -101,7 +91,6 @@ export function parseReference(ref) {
 /**
  * Compute a canonical numeric position for a verse in the Bible.
  * Used for sorting cross-references by distance from a selected verse.
- * Produces a unique sortable integer: (bookIndex+1)*100000 + chapter*1000 + verse
  */
 export function getVersePosition(bookAbbr, chapter, verse) {
   const book = _booksByAbbr[bookAbbr];
@@ -113,8 +102,8 @@ export function getVersePosition(bookAbbr, chapter, verse) {
 
 /**
  * Format a reference ID into a human-readable string.
- * "Gen.1.1" → "Genesis 1:1"
- * "John.1.1-John.1.3" → "John 1:1-3"
+ * "Gen.1.1" -> "Genesis 1:1"
+ * "John.1.1-John.1.3" -> "John 1:1-3"
  */
 export function formatReference(ref) {
   const parsed = parseReference(ref);

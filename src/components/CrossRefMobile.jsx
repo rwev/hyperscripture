@@ -1,40 +1,8 @@
 import { useEffect, useRef, useMemo, useCallback } from 'react';
-import {
-  formatReference, parseReference, getVersePosition,
-} from '../utils/bible';
+import { formatReference, parseReference, makeVerseId } from '../utils/bible';
+import { partitionRefs } from '../utils/crossref';
 import { useRefTexts } from '../hooks/useRefTexts';
 import { useReader } from '../context/ReaderContext';
-
-/**
- * Partition refs into prior/later, sorted by ascending distance.
- */
-function partitionRefs(refs, selectedVerse) {
-  if (!refs || !selectedVerse) return { prior: [], later: [] };
-
-  const selectedPos = getVersePosition(
-    selectedVerse.book, selectedVerse.chapter, selectedVerse.verse
-  );
-
-  const prior = [];
-  const later = [];
-
-  for (const [ref, votes] of refs) {
-    const parsed = parseReference(ref);
-    if (!parsed) continue;
-    const pos = getVersePosition(parsed.book, parsed.chapter, parsed.verseStart);
-    const distance = Math.abs(pos - selectedPos);
-    if (pos < selectedPos) {
-      prior.push({ ref, votes, distance });
-    } else if (pos > selectedPos) {
-      later.push({ ref, votes, distance });
-    }
-  }
-
-  prior.sort((a, b) => a.distance - b.distance);
-  later.sort((a, b) => a.distance - b.distance);
-
-  return { prior, later };
-}
 
 /**
  * Mobile cross-reference popover with Prior / Later sections.
@@ -48,7 +16,6 @@ export default function CrossRefMobile({ verse, refs, onNavigate, onClose }) {
     [refs, verse]
   );
 
-  // Cap for mobile performance
   const cappedPrior = useMemo(() => prior.slice(0, 25), [prior]);
   const cappedLater = useMemo(() => later.slice(0, 25), [later]);
 
@@ -61,7 +28,7 @@ export default function CrossRefMobile({ verse, refs, onNavigate, onClose }) {
   // Position below selected verse
   useEffect(() => {
     if (!verse || !popoverRef.current) return;
-    const verseId = `${verse.book}.${verse.chapter}.${verse.verse}`;
+    const verseId = makeVerseId(verse.book, verse.chapter, verse.verse);
     const verseEl = document.getElementById(verseId);
     if (!verseEl) return;
 
@@ -142,7 +109,7 @@ export default function CrossRefMobile({ verse, refs, onNavigate, onClose }) {
     <div className="crossref-mobile" ref={popoverRef}>
       <div className="crossref-mobile-header">
         <span className="crossref-mobile-title">
-          {formatReference(`${verse.book}.${verse.chapter}.${verse.verse}`)}
+          {formatReference(makeVerseId(verse.book, verse.chapter, verse.verse))}
         </span>
         <span className="crossref-mobile-total">
           {refs.length} ref{refs.length !== 1 ? 's' : ''}

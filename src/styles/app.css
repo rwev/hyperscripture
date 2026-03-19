@@ -218,6 +218,8 @@
   overflow-x: hidden;
   position: relative;
   scroll-behavior: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 .reader-content {
@@ -419,9 +421,6 @@
   text-align: center;
 }
 
-.crossref-col-list {
-  padding: 0;
-}
 
 /* ── Cross-Reference Entry (shared) ────────────────────────────────── */
 
@@ -439,11 +438,6 @@
   text-align: left;
   padding: var(--space-sm) var(--space-md);
   transition: background 0.1s;
-  cursor: pointer;
-  background: none;
-  border: none;
-  font: inherit;
-  color: inherit;
 }
 
 .crossref-entry-btn:hover {
@@ -536,18 +530,11 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  cursor: pointer;
-  background: none;
-  border: none;
 }
 
 .crossref-mobile-close:hover {
   color: var(--text);
   background: var(--highlight);
-}
-
-.crossref-mobile-section {
-  padding: 0;
 }
 
 .crossref-mobile-section-title {
@@ -581,9 +568,6 @@
   font-style: italic;
 }
 
-.crossref-mobile-list {
-  padding: 0;
-}
 
 .crossref-mobile-overflow {
   padding: var(--space-sm) var(--space-md);
@@ -769,11 +753,6 @@
 }
 
 /* ── Scroll smoothness ─────────────────────────────────────────────── */
-
-.reader-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
 
 .reader-scroll::-webkit-scrollbar {
   width: 6px;

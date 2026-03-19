@@ -4,7 +4,8 @@ import Reader from './components/Reader';
 import Navigation from './components/Navigation';
 import TranslationPicker from './components/TranslationPicker';
 import QuickNav from './components/QuickNav';
-import { getBookByAbbr, slugToBookAbbr } from './utils/bible';
+import { getBookByAbbr, slugToBookAbbr, makeVerseId, bookAbbrToSlug } from './utils/bible';
+import { scrollToVerse } from './utils/scroll';
 
 function AppHeader({ onOpenQuickNav }) {
   const { book, chapter, meta, toggleNav } = useReader();
@@ -64,23 +65,10 @@ function HashRouter() {
 
       navigate(abbr, ch);
 
-      // If a verse is in the URL, scroll to it and select it
       if (verse) {
-        const verseId = `${abbr}.${ch}.${verse}`;
-        let attempts = 0;
-        const trySelect = () => {
-          const el = document.getElementById(verseId);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.dataset.highlight = 'true';
-            setTimeout(() => { delete el.dataset.highlight; }, 2000);
-            selectVerse(abbr, ch, verse);
-          } else if (attempts < 30) {
-            attempts++;
-            requestAnimationFrame(trySelect);
-          }
-        };
-        requestAnimationFrame(trySelect);
+        scrollToVerse(makeVerseId(abbr, ch, verse), {
+          onFound: () => selectVerse(abbr, ch, verse),
+        });
       }
     };
 
@@ -89,13 +77,12 @@ function HashRouter() {
     return () => window.removeEventListener('hashchange', handleHash);
   }, [meta, navigate, selectVerse]);
 
-  // Set initial URL hash from saved state when no hash is present
+  // Set initial URL hash when no hash is present
   useEffect(() => {
     if (!meta || !book) return;
     const hash = window.location.hash.replace(/^#\/?/, '');
     if (!hash) {
-      const slug = book.toLowerCase();
-      history.replaceState(null, '', `#/${slug}/${chapter}`);
+      history.replaceState(null, '', `#/${bookAbbrToSlug(book)}/${chapter}`);
     }
   }, [meta, book, chapter]);
 
@@ -104,15 +91,12 @@ function HashRouter() {
     if (!meta || !book) return;
 
     if (selectedVerse) {
-      const slug = selectedVerse.book.toLowerCase();
-      const hash = `#/${slug}/${selectedVerse.chapter}/${selectedVerse.verse}`;
+      const hash = `#/${bookAbbrToSlug(selectedVerse.book)}/${selectedVerse.chapter}/${selectedVerse.verse}`;
       if (window.location.hash !== hash) {
         history.replaceState(null, '', hash);
       }
     } else {
-      // Deselected: revert to book/chapter only
-      const slug = book.toLowerCase();
-      const hash = `#/${slug}/${chapter}`;
+      const hash = `#/${bookAbbrToSlug(book)}/${chapter}`;
       if (window.location.hash !== hash) {
         history.replaceState(null, '', hash);
       }
@@ -136,23 +120,8 @@ function AppInner() {
 
   const handleQuickNavigate = useCallback((abbr, chapter, verse) => {
     navigate(abbr, chapter);
-
     if (verse) {
-      // Scroll to the specific verse after navigation
-      const verseId = `${abbr}.${chapter}.${verse}`;
-      let attempts = 0;
-      const tryScroll = () => {
-        const el = document.getElementById(verseId);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          el.dataset.highlight = 'true';
-          setTimeout(() => { delete el.dataset.highlight; }, 2000);
-        } else if (attempts < 30) {
-          attempts++;
-          requestAnimationFrame(tryScroll);
-        }
-      };
-      requestAnimationFrame(tryScroll);
+      scrollToVerse(makeVerseId(abbr, chapter, verse));
     }
   }, [navigate]);
 
@@ -161,10 +130,8 @@ function AppInner() {
     if (!meta) return;
 
     const handler = (e) => {
-      // Don't trigger if typing in an input, select, or textarea
       const tag = e.target.tagName;
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
-      // Don't trigger if nav overlay is open
       if (navOpen) return;
 
       if (e.key === '/') {

@@ -1,45 +1,13 @@
-import { useMemo, useEffect, useRef } from 'react';
-import { formatReference, parseReference, getVersePosition } from '../utils/bible';
+import { useMemo, useEffect, useRef, memo } from 'react';
+import { formatReference, parseReference } from '../utils/bible';
+import { partitionRefs } from '../utils/crossref';
 import { useRefTexts } from '../hooks/useRefTexts';
 import { useReader } from '../context/ReaderContext';
 
 /**
- * Partition cross-references into prior/later relative to the selected verse,
- * sorted by ascending canonical distance (closest first).
- */
-function partitionRefs(refs, selectedVerse) {
-  if (!refs || !selectedVerse) return { prior: [], later: [] };
-
-  const selectedPos = getVersePosition(
-    selectedVerse.book, selectedVerse.chapter, selectedVerse.verse
-  );
-
-  const prior = [];
-  const later = [];
-
-  for (const [ref, votes] of refs) {
-    const parsed = parseReference(ref);
-    if (!parsed) continue;
-    const pos = getVersePosition(parsed.book, parsed.chapter, parsed.verseStart);
-    const distance = Math.abs(pos - selectedPos);
-
-    if (pos < selectedPos) {
-      prior.push({ ref, votes, distance });
-    } else if (pos > selectedPos) {
-      later.push({ ref, votes, distance });
-    }
-  }
-
-  prior.sort((a, b) => a.distance - b.distance);
-  later.sort((a, b) => a.distance - b.distance);
-
-  return { prior, later };
-}
-
-/**
  * A single reference entry in a column.
  */
-function RefEntry({ refId, text, loading, onNavigate }) {
+const RefEntry = memo(function RefEntry({ refId, text, loading, onNavigate }) {
   return (
     <li className="crossref-entry">
       <button
@@ -58,7 +26,7 @@ function RefEntry({ refId, text, loading, onNavigate }) {
       </button>
     </li>
   );
-}
+});
 
 /**
  * A single column of cross-reference entries (prior or later).
@@ -66,7 +34,6 @@ function RefEntry({ refId, text, loading, onNavigate }) {
 function RefColumn({ direction, entries, texts, loading, onNavigate }) {
   const scrollRef = useRef(null);
 
-  // Reset scroll when entries change
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [entries]);
@@ -123,32 +90,10 @@ export function useCrossRefColumns(selectedVerse, refs) {
   return { prior, later, priorTexts, laterTexts, priorLoading, laterLoading };
 }
 
-/**
- * The "prior" (left) column component.
- */
 export function PriorColumn({ entries, texts, loading, onNavigate }) {
-  return (
-    <RefColumn
-      direction="prior"
-      entries={entries}
-      texts={texts}
-      loading={loading}
-      onNavigate={onNavigate}
-    />
-  );
+  return <RefColumn direction="prior" entries={entries} texts={texts} loading={loading} onNavigate={onNavigate} />;
 }
 
-/**
- * The "later" (right) column component.
- */
 export function LaterColumn({ entries, texts, loading, onNavigate }) {
-  return (
-    <RefColumn
-      direction="later"
-      entries={entries}
-      texts={texts}
-      loading={loading}
-      onNavigate={onNavigate}
-    />
-  );
+  return <RefColumn direction="later" entries={entries} texts={texts} loading={loading} onNavigate={onNavigate} />;
 }

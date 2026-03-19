@@ -3,6 +3,10 @@ import Verse from './Verse';
 
 /**
  * A chapter of Bible text, rendered as flowing prose with verse markers.
+ *
+ * Accepts scalar selectedBook/selectedChapter/selectedVerseNum props instead
+ * of a selectedVerse object to preserve memo() effectiveness -- only the
+ * chapter containing the selected verse re-renders on selection change.
  */
 const Chapter = memo(function Chapter({
   bookAbbr,
@@ -11,9 +15,13 @@ const Chapter = memo(function Chapter({
   verses,
   showBookHeading,
   crossRefData,
-  selectedVerse,
+  selectedBook,
+  selectedChapter,
+  selectedVerseNum,
   onSelectVerse,
 }) {
+  const isSelectedChapter = selectedBook === bookAbbr && selectedChapter === chapter;
+
   return (
     <section
       className="chapter"
@@ -30,10 +38,7 @@ const Chapter = memo(function Chapter({
         {verses.map(v => {
           const key = `${chapter}.${v.v}`;
           const refs = crossRefData?.[key];
-          const isSelected =
-            selectedVerse?.book === bookAbbr &&
-            selectedVerse?.chapter === chapter &&
-            selectedVerse?.verse === v.v;
+          const isSelected = isSelectedChapter && selectedVerseNum === v.v;
 
           return (
             <Verse

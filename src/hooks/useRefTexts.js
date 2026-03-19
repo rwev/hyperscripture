@@ -4,9 +4,9 @@ import { useBibleText } from './useBibleText';
 
 /**
  * Shared hook for loading verse texts for an array of cross-references.
- * Handles batched parallel loading, cancellation, and incremental updates.
+ * Handles batched parallel loading and cancellation.
  *
- * @param {Array} refs - Array of [refId, votes] tuples
+ * @param {Array} refs - Array of [refId, votes] tuples (must be memoized by caller)
  * @param {string} translation - Current translation ID
  * @returns {{ texts: Object, loading: boolean }}
  */
@@ -80,11 +80,6 @@ export function useRefTexts(refs, translation) {
             }
           })
         );
-
-        // Incremental update after each batch
-        if (!cancelled) {
-          setTexts(prev => ({ ...prev, ...result }));
-        }
       }
 
       if (!cancelled) {

@@ -43,9 +43,5 @@ export function useBibleText() {
     return bookData.chapters[String(chapter)] || [];
   }, []);
 
-  const isLoaded = useCallback((translation, filename) => {
-    return cache.has(`${translation}/${filename}`);
-  }, []);
-
-  return { loadBook, getVerses, isLoaded };
+  return { loadBook, getVerses };
 }

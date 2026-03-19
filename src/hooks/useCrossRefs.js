@@ -40,6 +40,10 @@ export function useCrossRefs() {
     return promise;
   }, []);
 
+  /**
+   * Get cross-references for a specific verse.
+   * Returns the cached array (stable reference) or EMPTY (stable constant).
+   */
   const getRefsForVerse = useCallback((bookAbbr, chapter, verse) => {
     const bookRefs = cache.get(bookAbbr);
     if (!bookRefs) return EMPTY;
@@ -47,21 +51,5 @@ export function useCrossRefs() {
     return bookRefs[key] || EMPTY;
   }, []);
 
-  const hasRefs = useCallback((bookAbbr, chapter, verse) => {
-    const bookRefs = cache.get(bookAbbr);
-    if (!bookRefs) return false;
-    const key = `${chapter}.${verse}`;
-    return key in bookRefs;
-  }, []);
-
-  const getRefCount = useCallback((bookAbbr, chapter, verse) => {
-    const refs = getRefsForVerse(bookAbbr, chapter, verse);
-    return refs.length;
-  }, [getRefsForVerse]);
-
-  const isLoaded = useCallback((bookAbbr) => {
-    return cache.has(bookAbbr);
-  }, []);
-
-  return { loadRefs, getRefsForVerse, hasRefs, getRefCount, isLoaded };
+  return { loadRefs, getRefsForVerse };
 }

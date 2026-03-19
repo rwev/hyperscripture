@@ -3,7 +3,8 @@ import { useReader } from '../context/ReaderContext';
 import { useBibleText } from '../hooks/useBibleText';
 import { useCrossRefs } from '../hooks/useCrossRefs';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import { getBookByAbbr, getNextBook, getPrevBook } from '../utils/bible';
+import { getBookByAbbr, getNextBook, getPrevBook, makeVerseId, bookAbbrToSlug } from '../utils/bible';
+import { scrollToVerse } from '../utils/scroll';
 import Chapter from './Chapter';
 import { useCrossRefColumns, PriorColumn, LaterColumn } from './CrossRefColumns';
 import CrossRefMobile from './CrossRefMobile';
@@ -44,14 +45,15 @@ export default function Reader() {
   const scrollTargetRef = useRef(null);
   const selectedVerseRef = useRef(selectedVerse);
 
-  // Keep refs in sync with state
-  useEffect(() => {
-    blocksRef.current = blocks;
-  }, [blocks]);
+  // Refs for keyboard handler to avoid listener churn on scroll-tracking updates
+  const bookRef = useRef(book);
+  const chapterRef = useRef(chapter);
 
-  useEffect(() => {
-    selectedVerseRef.current = selectedVerse;
-  }, [selectedVerse]);
+  // Keep refs in sync with state
+  useEffect(() => { blocksRef.current = blocks; }, [blocks]);
+  useEffect(() => { selectedVerseRef.current = selectedVerse; }, [selectedVerse]);
+  useEffect(() => { bookRef.current = book; }, [book]);
+  useEffect(() => { chapterRef.current = chapter; }, [chapter]);
 
   // ── Load a chapter block ──────────────────────────────────────────────
 
@@ -75,9 +77,6 @@ export default function Reader() {
   }, [translation, loadBook, getVerses, loadRefs]);
 
   // ── Initial load (only on explicit navigation) ────────────────────────
-  // Triggered by navId which only changes on navigate() calls.
-  // book/chapter are read from context -- they reflect the NAVIGATE target
-  // since NAVIGATE sets navId, book, and chapter atomically in one dispatch.
 
   useEffect(() => {
     if (!book || !meta) return;
@@ -155,7 +154,7 @@ export default function Reader() {
 
         if (nextChapter > bookMeta.chapters) {
           const nextBook = getNextBook(last.bookAbbr);
-          if (!nextBook) return; // End of Bible
+          if (!nextBook) return;
           nextBookAbbr = nextBook.abbr;
           nextChapter = 1;
         }
@@ -172,7 +171,7 @@ export default function Reader() {
 
         if (prevChapter < 1) {
           const prevBook = getPrevBook(first.bookAbbr);
-          if (!prevBook) return; // Start of Bible
+          if (!prevBook) return;
           prevBookAbbr = prevBook.abbr;
           prevChapter = prevBook.chapters;
         }
@@ -241,7 +240,6 @@ export default function Reader() {
       requestAnimationFrame(() => {
         ticking = false;
 
-        // Throttle: at most one update per 300ms
         const now = Date.now();
         if (now - lastUpdate < 300) return;
 
@@ -261,14 +259,9 @@ export default function Reader() {
           const ch = parseInt(currentSection.dataset.chapter, 10);
           if (bookAbbr && !isNaN(ch)) {
             lastUpdate = now;
-            // Update header display; pass book so header shows correct book
-            // when scrolling across book boundaries
             setChapter(ch, bookAbbr);
-            // Update URL hash only when no verse is selected;
-            // when a verse is selected, the HashRouter owns the URL
             if (!selectedVerseRef.current) {
-              const slug = bookAbbr.toLowerCase();
-              const hash = `#/${slug}/${ch}`;
+              const hash = `#/${bookAbbrToSlug(bookAbbr)}/${ch}`;
               if (window.location.hash !== hash) {
                 history.replaceState(null, '', hash);
               }
@@ -282,27 +275,29 @@ export default function Reader() {
     return () => scrollEl.removeEventListener('scroll', handler);
   }, [initialScrollDone, setChapter]);
 
-  // ── Keyboard navigation ──────────────────────────────────────────────
+  // ── Keyboard navigation (uses refs to avoid listener churn) ──────────
 
   useEffect(() => {
     const handler = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      const b = bookRef.current;
+      const ch = chapterRef.current;
 
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        if (chapter > 1) {
-          navigate(book, chapter - 1);
+        if (ch > 1) {
+          navigate(b, ch - 1);
         } else {
-          const prev = getPrevBook(book);
+          const prev = getPrevBook(b);
           if (prev) navigate(prev.abbr, prev.chapters);
         }
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        const bookMeta = getBookByAbbr(book);
-        if (bookMeta && chapter < bookMeta.chapters) {
-          navigate(book, chapter + 1);
+        const bookMeta = getBookByAbbr(b);
+        if (bookMeta && ch < bookMeta.chapters) {
+          navigate(b, ch + 1);
         } else {
-          const next = getNextBook(book);
+          const next = getNextBook(b);
           if (next) navigate(next.abbr, 1);
         }
       }
@@ -310,31 +305,17 @@ export default function Reader() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [book, chapter, navigate]);
+  }, [navigate]);
 
   // ── Cross-reference navigation (navigate + re-select) ───────────────
 
   const handleCrossRefNavigate = useCallback((targetBook, targetChapter, targetVerse) => {
     navigate(targetBook, targetChapter);
-
-    const verseId = `${targetBook}.${targetChapter}.${targetVerse}`;
-    let attempts = 0;
-    const maxAttempts = 30;
-    const tryScroll = () => {
-      const el = document.getElementById(verseId);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.dataset.highlight = 'true';
-        setTimeout(() => { delete el.dataset.highlight; }, 2000);
-        setTimeout(() => {
-          selectVerse(targetBook, targetChapter, targetVerse);
-        }, 100);
-      } else if (attempts < maxAttempts) {
-        attempts++;
-        requestAnimationFrame(tryScroll);
-      }
-    };
-    requestAnimationFrame(tryScroll);
+    scrollToVerse(makeVerseId(targetBook, targetChapter, targetVerse), {
+      onFound: () => {
+        setTimeout(() => selectVerse(targetBook, targetChapter, targetVerse), 100);
+      },
+    });
   }, [navigate, selectVerse]);
 
   // ── Get cross-refs for selected verse ────────────────────────────────
@@ -346,7 +327,6 @@ export default function Reader() {
 
   const hasRefs = selectedVerse && selectedRefs.length > 0;
 
-  // Desktop: partition refs into prior/later columns
   const {
     prior, later, priorTexts, laterTexts, priorLoading, laterLoading,
   } = useCrossRefColumns(selectedVerse, selectedRefs);
@@ -389,7 +369,9 @@ export default function Reader() {
                 verses={block.verses}
                 showBookHeading={showBookHeading}
                 crossRefData={block.crossRefs}
-                selectedVerse={selectedVerse}
+                selectedBook={selectedVerse?.book}
+                selectedChapter={selectedVerse?.chapter}
+                selectedVerseNum={selectedVerse?.verse}
                 onSelectVerse={selectVerse}
               />
             );

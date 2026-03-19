@@ -163,7 +163,7 @@ const ALIASES = {
  * This correctly handles "1cor2" → book="1cor", chapter=2
  * and "john3:16" → book="john", chapter=3, verse=16.
  */
-export function parseQuery(raw) {
+function parseQuery(raw) {
   if (!raw) return null;
 
   // Normalize: lowercase, trim, collapse spaces, strip leading/trailing punctuation
@@ -302,7 +302,7 @@ function matchBookPrefix(query) {
  * Match a book query against both the alias table and book names.
  * Returns top matches sorted by score.
  */
-export function matchBooks(query) {
+function matchBooks(query) {
   if (!query) return [];
 
   const q = query.toLowerCase().replace(/\s+/g, '');
