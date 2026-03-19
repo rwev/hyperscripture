@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { parseReference, getBookByAbbr } from '../utils/bible';
 import { useBibleText } from './useBibleText';
 
@@ -30,7 +30,6 @@ export function useRefTexts(refs, translation) {
     // Deduplicate work: skip if refs haven't changed
     const key = refs.map(r => r[0]).join(',');
     if (key === prevKey.current) return;
-    prevKey.current = key;
 
     let cancelled = false;
     setLoading(true);
@@ -83,14 +82,20 @@ export function useRefTexts(refs, translation) {
       }
 
       if (!cancelled) {
+        prevKey.current = key;
         setTexts(result);
         setLoading(false);
       }
     };
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      // Reset prevKey so that the same refs can re-trigger loading after cancellation
+      prevKey.current = '';
+      setLoading(false);
+    };
   }, [refs, translation, loadBook]);
 
-  return { texts, loading };
+  return useMemo(() => ({ texts, loading }), [texts, loading]);
 }

@@ -19,17 +19,18 @@ export default function QuickNav({ onNavigate, onClose }) {
     });
   }, []);
 
-  // Resolve results on every keystroke
-  useEffect(() => {
-    if (!query.trim()) {
+  // Resolve results directly in onChange to avoid extra render cycle
+  const handleChange = useCallback((e) => {
+    const value = e.target.value;
+    setQuery(value);
+    if (!value.trim()) {
       setResults([]);
       setSelectedIndex(0);
-      return;
+    } else {
+      setResults(resolveInput(value));
+      setSelectedIndex(0);
     }
-    const r = resolveInput(query);
-    setResults(r);
-    setSelectedIndex(0);
-  }, [query]);
+  }, []);
 
   // Close on Escape, navigate on Enter, arrow keys for selection
   const handleKeyDown = useCallback((e) => {
@@ -77,7 +78,7 @@ export default function QuickNav({ onNavigate, onClose }) {
             className="quicknav-input"
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="john3:16, rom8, ps23…"
             spellCheck={false}

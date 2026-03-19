@@ -773,6 +773,51 @@
 
 
 
+/* ── Error Boundary ────────────────────────────────────────────────── */
+
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  height: 100dvh;
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.error-boundary-title {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: var(--space-md);
+}
+
+.error-boundary-message {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-lg);
+  max-width: 40ch;
+}
+
+.error-boundary-retry {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--bg);
+  background: var(--accent);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.error-boundary-retry:hover {
+  opacity: 0.85;
+}
+
 /* ── Selection ─────────────────────────────────────────────────────── */
 
 ::selection {

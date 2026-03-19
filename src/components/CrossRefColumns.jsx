@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useMemo, useEffect, useRef, memo } from 'react';
 import { formatReference, parseReference } from '../utils/bible';
 import { partitionRefs } from '../utils/crossref';
@@ -31,7 +32,7 @@ const RefEntry = memo(function RefEntry({ refId, text, loading, onNavigate }) {
 /**
  * A single column of cross-reference entries (prior or later).
  */
-function RefColumn({ direction, entries, texts, loading, onNavigate }) {
+const RefColumn = memo(function RefColumn({ direction, entries, texts, loading, onNavigate }) {
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -54,9 +55,9 @@ function RefColumn({ direction, entries, texts, loading, onNavigate }) {
         </div>
       ) : (
         <ul className="crossref-col-list">
-          {entries.map(({ ref }, i) => (
+          {entries.map(({ ref }) => (
             <RefEntry
-              key={i}
+              key={ref}
               refId={ref}
               text={texts[ref]}
               loading={loading}
@@ -67,7 +68,7 @@ function RefColumn({ direction, entries, texts, loading, onNavigate }) {
       )}
     </aside>
   );
-}
+});
 
 /**
  * Hook that computes partitioned refs and loads their texts.
@@ -90,10 +91,16 @@ export function useCrossRefColumns(selectedVerse, refs) {
   return { prior, later, priorTexts, laterTexts, priorLoading, laterLoading };
 }
 
-export function PriorColumn({ entries, texts, loading, onNavigate }) {
+/**
+ * Prior cross-reference column (desktop).
+ */
+export const PriorColumn = memo(function PriorColumn({ entries, texts, loading, onNavigate }) {
   return <RefColumn direction="prior" entries={entries} texts={texts} loading={loading} onNavigate={onNavigate} />;
-}
+});
 
-export function LaterColumn({ entries, texts, loading, onNavigate }) {
+/**
+ * Later cross-reference column (desktop).
+ */
+export const LaterColumn = memo(function LaterColumn({ entries, texts, loading, onNavigate }) {
   return <RefColumn direction="later" entries={entries} texts={texts} loading={loading} onNavigate={onNavigate} />;
-}
+});

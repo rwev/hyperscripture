@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { formatReference, parseReference, makeVerseId } from '../utils/bible';
 import { partitionRefs } from '../utils/crossref';
 import { useRefTexts } from '../hooks/useRefTexts';
@@ -7,7 +7,7 @@ import { useReader } from '../context/ReaderContext';
 /**
  * Mobile cross-reference popover with Prior / Later sections.
  */
-export default function CrossRefMobile({ verse, refs, onNavigate, onClose }) {
+const CrossRefMobile = memo(function CrossRefMobile({ verse, refs, onNavigate, onClose }) {
   const popoverRef = useRef(null);
   const { translation } = useReader();
 
@@ -90,8 +90,8 @@ export default function CrossRefMobile({ verse, refs, onNavigate, onClose }) {
         <p className="crossref-mobile-section-empty">None</p>
       ) : (
         <ul className="crossref-mobile-list">
-          {entries.map(({ ref }, i) => (
-            <li key={i} className="crossref-entry">
+          {entries.map(({ ref }) => (
+            <li key={ref} className="crossref-entry">
               <button className="crossref-entry-btn" onClick={() => handleClick(ref)}>
                 <span className="crossref-entry-label">{formatReference(ref)}</span>
                 {texts[ref] && (
@@ -127,4 +127,6 @@ export default function CrossRefMobile({ verse, refs, onNavigate, onClose }) {
       )}
     </div>
   );
-}
+});
+
+export default CrossRefMobile;

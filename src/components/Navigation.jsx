@@ -7,15 +7,17 @@ import { useReader } from '../context/ReaderContext';
 export default function Navigation() {
   const { meta, navOpen, closeNav, navigate, book: currentBook, chapter: currentChapter } = useReader();
   const [expandedBook, setExpandedBook] = useState(null);
+  const [prevNavOpen, setPrevNavOpen] = useState(false);
   const overlayRef = useRef(null);
   const expandedRef = useRef(null);
 
-  // Reset expanded book when opening
-  useEffect(() => {
-    if (navOpen) {
-      setExpandedBook(null);
-    }
-  }, [navOpen]);
+  // Reset expanded book when opening (setState during render, per React docs)
+  if (navOpen && !prevNavOpen) {
+    setExpandedBook(null);
+  }
+  if (navOpen !== prevNavOpen) {
+    setPrevNavOpen(navOpen);
+  }
 
   // Close on Escape
   useEffect(() => {

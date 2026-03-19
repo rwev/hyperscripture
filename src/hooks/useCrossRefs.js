@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 /**
  * Hook for loading and querying cross-reference data.
@@ -31,9 +31,9 @@ export function useCrossRefs() {
       .catch(err => {
         inflight.delete(bookAbbr);
         console.warn(`Could not load cross-refs for ${bookAbbr}:`, err);
-        const empty = {};
-        cache.set(bookAbbr, empty);
-        return empty;
+        // Re-throw so callers can handle; do NOT cache empty results on error
+        // to allow retry on subsequent attempts
+        throw err;
       });
 
     inflight.set(bookAbbr, promise);
@@ -51,5 +51,5 @@ export function useCrossRefs() {
     return bookRefs[key] || EMPTY;
   }, []);
 
-  return { loadRefs, getRefsForVerse };
+  return useMemo(() => ({ loadRefs, getRefsForVerse }), [loadRefs, getRefsForVerse]);
 }

@@ -1,21 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useCallback } from 'react';
+import { useSyncExternalStore } from 'react';
 
 /**
  * Hook that returns whether a CSS media query matches.
+ * Uses useSyncExternalStore for correct synchronization without
+ * calling setState inside an effect body.
  */
 export function useMediaQuery(query) {
-  const [matches, setMatches] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(query).matches;
-  });
-
-  useEffect(() => {
+  const subscribe = useCallback((callback) => {
     const mql = window.matchMedia(query);
-    const handler = (e) => setMatches(e.matches);
-    mql.addEventListener('change', handler);
-    setMatches(mql.matches);
-    return () => mql.removeEventListener('change', handler);
+    mql.addEventListener('change', callback);
+    return () => mql.removeEventListener('change', callback);
   }, [query]);
 
-  return matches;
+  const getSnapshot = useCallback(() => {
+    return window.matchMedia(query).matches;
+  }, [query]);
+
+  return useSyncExternalStore(subscribe, getSnapshot);
 }

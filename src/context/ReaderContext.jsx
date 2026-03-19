@@ -1,7 +1,11 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useReducer, useCallback, useEffect, useMemo } from 'react';
 import { loadMeta } from '../utils/bible';
 
-const ReaderContext = createContext(null);
+// ── Two contexts: stable (meta + actions) and volatile (state that changes often) ──
+
+const StableContext = createContext(null);
+const StateContext = createContext(null);
 
 const initialState = {
   meta: null,
@@ -76,15 +80,21 @@ function reducer(state, action) {
   }
 }
 
+/**
+ * Provider that exposes reader state through two contexts:
+ * - StableContext: meta + action callbacks (rarely changes, prevents re-render cascade)
+ * - StateContext: volatile state (book, chapter, selectedVerse, etc.)
+ */
 export function ReaderProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // Load metadata on mount, then default to Genesis 1
+  // Load metadata on mount; do NOT auto-navigate to Genesis here.
+  // The HashRouter handles initial navigation after checking the URL hash,
+  // avoiding a double-navigate on deep-link loads.
   useEffect(() => {
     loadMeta()
       .then(meta => {
         dispatch({ type: 'META_LOADED', meta });
-        dispatch({ type: 'NAVIGATE', book: meta.books[0].abbr, chapter: 1 });
       })
       .catch(err => {
         console.error('Failed to load Bible metadata:', err);
@@ -120,8 +130,8 @@ export function ReaderProvider({ children }) {
     dispatch({ type: 'CLOSE_NAV' });
   }, []);
 
-  const value = useMemo(() => ({
-    ...state,
+  // Stable context: actions never change; meta changes once (null -> loaded)
+  const stable = useMemo(() => ({
     navigate,
     setChapter,
     setTranslation,
@@ -129,17 +139,43 @@ export function ReaderProvider({ children }) {
     deselectVerse,
     toggleNav,
     closeNav,
-  }), [state, navigate, setChapter, setTranslation, selectVerse, deselectVerse, toggleNav, closeNav]);
+  }), [navigate, setChapter, setTranslation, selectVerse, deselectVerse, toggleNav, closeNav]);
 
   return (
-    <ReaderContext.Provider value={value}>
-      {children}
-    </ReaderContext.Provider>
+    <StableContext.Provider value={stable}>
+      <StateContext.Provider value={state}>
+        {children}
+      </StateContext.Provider>
+    </StableContext.Provider>
   );
 }
 
+/**
+ * Access all reader state and actions. Use this when a component needs volatile state.
+ */
 export function useReader() {
-  const ctx = useContext(ReaderContext);
-  if (!ctx) throw new Error('useReader must be used within ReaderProvider');
+  const stable = useContext(StableContext);
+  const state = useContext(StateContext);
+  if (!stable || !state) throw new Error('useReader must be used within ReaderProvider');
+  return useMemo(() => ({ ...state, ...stable }), [state, stable]);
+}
+
+/**
+ * Access only action callbacks (navigate, selectVerse, etc.).
+ * Components using this hook do NOT re-render on state changes.
+ */
+export function useReaderActions() {
+  const ctx = useContext(StableContext);
+  if (!ctx) throw new Error('useReaderActions must be used within ReaderProvider');
+  return ctx;
+}
+
+/**
+ * Access only reader state (book, chapter, meta, etc.).
+ * Use when a component needs state but not action callbacks.
+ */
+export function useReaderState() {
+  const ctx = useContext(StateContext);
+  if (!ctx) throw new Error('useReaderState must be used within ReaderProvider');
   return ctx;
 }

@@ -3,7 +3,7 @@ import { useReader } from '../context/ReaderContext';
 import { useBibleText } from '../hooks/useBibleText';
 import { useCrossRefs } from '../hooks/useCrossRefs';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import { getBookByAbbr, getNextBook, getPrevBook, makeVerseId, bookAbbrToSlug } from '../utils/bible';
+import { getBookByAbbr, getNextBook, getPrevBook, makeVerseId } from '../utils/bible';
 import { scrollToVerse } from '../utils/scroll';
 import Chapter from './Chapter';
 import { useCrossRefColumns, PriorColumn, LaterColumn } from './CrossRefColumns';
@@ -44,16 +44,19 @@ export default function Reader() {
   const blocksRef = useRef([]);
   const scrollTargetRef = useRef(null);
   const selectedVerseRef = useRef(selectedVerse);
+  const scrollCancelRef = useRef(null);
 
-  // Refs for keyboard handler to avoid listener churn on scroll-tracking updates
+  // Refs for keyboard handler and initial-load effect to avoid listener/effect churn
   const bookRef = useRef(book);
   const chapterRef = useRef(chapter);
 
-  // Keep refs in sync with state
-  useEffect(() => { blocksRef.current = blocks; }, [blocks]);
-  useEffect(() => { selectedVerseRef.current = selectedVerse; }, [selectedVerse]);
-  useEffect(() => { bookRef.current = book; }, [book]);
-  useEffect(() => { chapterRef.current = chapter; }, [chapter]);
+  // Keep refs in sync with state (consolidated into a single effect)
+  useEffect(() => {
+    blocksRef.current = blocks;
+    selectedVerseRef.current = selectedVerse;
+    bookRef.current = book;
+    chapterRef.current = chapter;
+  }, [blocks, selectedVerse, book, chapter]);
 
   // ── Load a chapter block ──────────────────────────────────────────────
 
@@ -65,7 +68,12 @@ export default function Reader() {
     const verses = getVerses(bookData, chapterNum);
     if (!verses || verses.length === 0) return null;
 
-    const crossRefs = await loadRefs(bookAbbr);
+    let crossRefs = {};
+    try {
+      crossRefs = await loadRefs(bookAbbr);
+    } catch {
+      // Cross-ref load failed; degrade gracefully with empty refs
+    }
 
     return {
       bookAbbr,
@@ -77,24 +85,35 @@ export default function Reader() {
   }, [translation, loadBook, getVerses, loadRefs]);
 
   // ── Initial load (only on explicit navigation) ────────────────────────
+  // Uses refs for book/chapter so they don't need to be in the dep array.
+  // navId increments only on navigate() calls, not on scroll-tracking setChapter().
 
   useEffect(() => {
-    if (!book || !meta) return;
+    if (!bookRef.current || !meta) return;
 
     let cancelled = false;
     setLoading(true);
     setInitialScrollDone(false);
 
+    // Cancel any in-progress scrollToVerse from a previous navigation
+    if (scrollCancelRef.current) {
+      scrollCancelRef.current();
+      scrollCancelRef.current = null;
+    }
+
+    const currentBook = bookRef.current;
+    const currentChapter = chapterRef.current;
+
     const init = async () => {
-      const bookMeta = getBookByAbbr(book);
+      const bookMeta = getBookByAbbr(currentBook);
       if (!bookMeta) return;
 
       const chaptersToLoad = [];
-      const startCh = Math.max(1, chapter - 1);
-      const endCh = Math.min(bookMeta.chapters, chapter + 2);
+      const startCh = Math.max(1, currentChapter - 1);
+      const endCh = Math.min(bookMeta.chapters, currentChapter + 2);
 
       for (let ch = startCh; ch <= endCh; ch++) {
-        chaptersToLoad.push({ bookAbbr: book, chapter: ch });
+        chaptersToLoad.push({ bookAbbr: currentBook, chapter: ch });
       }
 
       const loaded = [];
@@ -106,13 +125,13 @@ export default function Reader() {
       if (!cancelled) {
         setBlocks(loaded);
         setLoading(false);
-        scrollTargetRef.current = { book, chapter };
+        scrollTargetRef.current = { book: currentBook, chapter: currentChapter };
       }
     };
 
     init();
     return () => { cancelled = true; };
-  }, [navId, translation, meta, loadChapterBlock]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [navId, translation, meta, loadChapterBlock]);
 
   // ── Scroll to target chapter after blocks update ─────────────────────
 
@@ -260,12 +279,7 @@ export default function Reader() {
           if (bookAbbr && !isNaN(ch)) {
             lastUpdate = now;
             setChapter(ch, bookAbbr);
-            if (!selectedVerseRef.current) {
-              const hash = `#/${bookAbbrToSlug(bookAbbr)}/${ch}`;
-              if (window.location.hash !== hash) {
-                history.replaceState(null, '', hash);
-              }
-            }
+            // URL sync is handled by HashRouter via replaceState
           }
         }
       });
@@ -310,12 +324,18 @@ export default function Reader() {
   // ── Cross-reference navigation (navigate + re-select) ───────────────
 
   const handleCrossRefNavigate = useCallback((targetBook, targetChapter, targetVerse) => {
+    // Cancel any previous scroll attempt
+    if (scrollCancelRef.current) {
+      scrollCancelRef.current();
+    }
+
     navigate(targetBook, targetChapter);
-    scrollToVerse(makeVerseId(targetBook, targetChapter, targetVerse), {
+    const cancel = scrollToVerse(makeVerseId(targetBook, targetChapter, targetVerse), {
       onFound: () => {
         setTimeout(() => selectVerse(targetBook, targetChapter, targetVerse), 100);
       },
     });
+    scrollCancelRef.current = cancel;
   }, [navigate, selectVerse]);
 
   // ── Get cross-refs for selected verse ────────────────────────────────
@@ -353,7 +373,7 @@ export default function Reader() {
       )}
 
       <div className="reader-scroll" ref={scrollRef}>
-        <div ref={topSentinelRef} className="scroll-sentinel top" />
+        <div ref={topSentinelRef} className="scroll-sentinel" />
         <div className="reader-content">
           {blocks.map((block, i) => {
             const showBookHeading =
@@ -377,7 +397,7 @@ export default function Reader() {
             );
           })}
         </div>
-        <div ref={bottomSentinelRef} className="scroll-sentinel bottom" />
+        <div ref={bottomSentinelRef} className="scroll-sentinel" />
 
         {!isDesktop && selectedVerse && selectedRefs.length > 0 && (
           <CrossRefMobile

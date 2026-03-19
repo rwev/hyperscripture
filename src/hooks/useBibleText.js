@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 /**
  * Hook for lazy-loading and caching Bible book data.
@@ -43,5 +43,5 @@ export function useBibleText() {
     return bookData.chapters[String(chapter)] || [];
   }, []);
 
-  return { loadBook, getVerses };
+  return useMemo(() => ({ loadBook, getVerses }), [loadBook, getVerses]);
 }

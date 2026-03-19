@@ -172,7 +172,7 @@ function parseQuery(raw) {
   // Handle explicit space between book and chapter: "gen 3:16", "1 cor 2"
   // First, try to extract chapter:verse from the end
   const explicitMatch = input.match(
-    /^(.+?)\s+(\d+)\s*[:\.]?\s*(\d+)?$/
+    /^(.+?)\s+(\d+)\s*[:.]?\s*(\d+)?$/
   );
   if (explicitMatch) {
     const bookQuery = explicitMatch[1].replace(/\s+/g, '');
@@ -186,7 +186,7 @@ function parseQuery(raw) {
   const noSpace = input.replace(/\s+/g, '');
 
   // Extract trailing chapter:verse pattern
-  const cvMatch = noSpace.match(/^(.+?)(\d+)\s*[:\.]?\s*(\d+)?$/);
+  const cvMatch = noSpace.match(/^(.+?)(\d+)\s*[:.]?\s*(\d+)?$/);
   if (cvMatch) {
     let bookPart = cvMatch[1];
     const chapter = parseInt(cvMatch[2], 10);
@@ -238,7 +238,7 @@ function findBookSplits(input) {
       let verse = null;
 
       if (rest) {
-        const cvParts = rest.match(/^(\d+)\s*[:\.]?\s*(\d+)?$/);
+        const cvParts = rest.match(/^(\d+)\s*[:.]?\s*(\d+)?$/);
         if (cvParts) {
           chapter = parseInt(cvParts[1], 10);
           verse = cvParts[2] ? parseInt(cvParts[2], 10) : null;
