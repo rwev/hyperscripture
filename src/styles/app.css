@@ -1063,6 +1063,11 @@
 
 /* ── Selection ─────────────────────────────────────────────────────── */
 
+::highlight(word-freq) {
+  background: var(--highlight);
+  color: inherit;
+}
+
 ::selection {
   background: var(--highlight-flash);
 }

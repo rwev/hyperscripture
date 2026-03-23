@@ -7,6 +7,7 @@ import { useNotes } from '../hooks/useNotes';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { getBookByAbbr, getNextBook, getPrevBook, makeVerseId, bookAbbrToSlug } from '../utils/bible';
 import { scrollToVerse } from '../utils/scroll';
+import { applyWordFrequencyHighlights, clearWordFrequencyHighlights, isHighlightSupported } from '../utils/wordfreq';
 import Chapter from './Chapter';
 import { useCrossRefColumns, PriorColumn, LaterColumn } from './CrossRefColumns';
 import CrossRefMobile from './CrossRefMobile';
@@ -397,6 +398,42 @@ export default function Reader() {
     setNoteEditing(null);
   }, [noteEditing, setNote]);
 
+  // ── Word frequency highlighting ────────────────────────────────────
+
+  const [wordFreqOn, setWordFreqOn] = useState(false);
+  const contentRef = useRef(null);
+
+  const toggleWordFreq = useCallback(() => {
+    if (!isHighlightSupported()) {
+      showToast('Word highlighting not supported in this browser');
+      return;
+    }
+    setWordFreqOn(prev => {
+      showToast(prev ? 'Word patterns off' : 'Word patterns on');
+      return !prev;
+    });
+  }, [showToast]);
+
+  // Apply/clear highlights when toggled or blocks change
+  useEffect(() => {
+    if (!wordFreqOn) {
+      clearWordFrequencyHighlights();
+      return;
+    }
+    // Delay slightly to let DOM settle after block renders
+    const timer = setTimeout(() => {
+      if (contentRef.current) {
+        applyWordFrequencyHighlights(contentRef.current);
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [wordFreqOn, blocks]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => clearWordFrequencyHighlights();
+  }, []);
+
   // ── Cross-reference navigation (navigate + re-select) ───────────────
 
   const handleCrossRefNavigate = useCallback((targetBook, targetChapter, targetVerse) => {
@@ -488,6 +525,12 @@ export default function Reader() {
         return;
       }
 
+      if (e.key === 'w' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        toggleWordFreq();
+        return;
+      }
+
       if (e.key === 'b' && !e.metaKey && !e.ctrlKey) {
         navigateBack();
         return;
@@ -515,7 +558,7 @@ export default function Reader() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [navigate, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, openNoteEditor, navigateBack]);
+  }, [navigate, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, openNoteEditor, toggleWordFreq, navigateBack]);
 
   // ── Get cross-refs for selected verse ────────────────────────────────
 
@@ -567,7 +610,7 @@ export default function Reader() {
 
       <div className="reader-scroll" ref={scrollRef}>
         <div ref={topSentinelRef} className="scroll-sentinel" />
-        <div className="reader-content">
+        <div className="reader-content" ref={contentRef}>
           {blocks.map((block, i) => {
             const showBookHeading =
               block.chapter === 1 ||
