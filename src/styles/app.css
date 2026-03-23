@@ -221,6 +221,53 @@
   height: 100%;
 }
 
+.reader.parallel {
+  display: flex;
+  flex-direction: column;
+}
+
+.reader.parallel .reader-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.reader.parallel .parallel-scroll {
+  flex: 1;
+  min-height: 0;
+  border-top: 1px solid var(--border);
+}
+
+.parallel-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xs) var(--space-md);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.parallel-scroll .chapter-heading {
+  cursor: default;
+}
+
+.parallel-scroll .chapter-heading:hover {
+  color: var(--text-faint);
+}
+
+@media (min-width: 1024px) {
+  .reader.parallel {
+    flex-direction: row;
+  }
+
+  .reader.parallel .parallel-scroll {
+    border-top: none;
+    border-left: 1px solid var(--border);
+  }
+}
+
 .reader-scroll {
   --progress: 0;
   width: 100%;
@@ -1250,6 +1297,7 @@
   .copy-toast,
   .note-editor,
   .search-bar,
+  .parallel-scroll,
   .nav-overlay,
   .quicknav-overlay,
   .help-overlay,

@@ -5,6 +5,7 @@ import { useBookmarks } from '../hooks/useBookmarks';
 import { useCrossRefs } from '../hooks/useCrossRefs';
 import { useNotes } from '../hooks/useNotes';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useParallelText } from '../hooks/useParallelText';
 import { useTextSearch } from '../hooks/useTextSearch';
 import { useWordFreq } from '../hooks/useWordFreq';
 import { getBookByAbbr, getNextBook, getPrevBook, makeVerseId, bookAbbrToSlug } from '../utils/bible';
@@ -38,6 +39,14 @@ export default function Reader() {
   const { notes, getNote, setNote } = useNotes();
   const { loadRefs, getRefsForVerse } = useCrossRefs();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
+
+  // ── Parallel translation ────────────────────────────────────────────
+  const [parallelMode, setParallelMode] = useState(false);
+  const [parallelTranslation, setParallelTranslation] = useState(() => {
+    const options = ['ESV', 'KJV', 'NIV', 'AMP'];
+    return options.find(t => t !== 'ESV') || 'KJV';
+  });
+  const parallelScrollRef = useRef(null);
 
   const [blocks, setBlocks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -414,6 +423,55 @@ export default function Reader() {
 
   const { toggleWordFreq } = useWordFreq(contentRef, blocks, showToast);
 
+  // ── Parallel translation data + scroll sync ────────────────────────
+
+  const parallelVerseMap = useParallelText(
+    blocks,
+    parallelTranslation !== translation ? parallelTranslation : null,
+    parallelMode,
+  );
+
+  const toggleParallel = useCallback(() => {
+    setParallelMode(prev => {
+      // When enabling, ensure parallel translation differs from primary
+      if (!prev && parallelTranslation === translation) {
+        const options = ['ESV', 'KJV', 'NIV', 'AMP'];
+        const alt = options.find(t => t !== translation);
+        if (alt) setParallelTranslation(alt);
+      }
+      showToast(prev ? 'Parallel off' : 'Parallel on');
+      return !prev;
+    });
+  }, [parallelTranslation, translation, showToast]);
+
+  // Sync parallel scroll with primary scroll
+  useEffect(() => {
+    if (!parallelMode) return;
+    const primary = scrollRef.current;
+    const parallel = parallelScrollRef.current;
+    if (!primary || !parallel) return;
+
+    let syncing = false;
+    const syncScroll = (source, target) => () => {
+      if (syncing) return;
+      syncing = true;
+      const ratio = source.scrollTop / (source.scrollHeight - source.clientHeight || 1);
+      target.scrollTop = ratio * (target.scrollHeight - target.clientHeight || 1);
+      requestAnimationFrame(() => { syncing = false; });
+    };
+
+    const syncFromPrimary = syncScroll(primary, parallel);
+    const syncFromParallel = syncScroll(parallel, primary);
+
+    primary.addEventListener('scroll', syncFromPrimary, { passive: true });
+    parallel.addEventListener('scroll', syncFromParallel, { passive: true });
+
+    return () => {
+      primary.removeEventListener('scroll', syncFromPrimary);
+      parallel.removeEventListener('scroll', syncFromParallel);
+    };
+  }, [parallelMode]);
+
   // ── Cross-reference navigation (navigate + re-select) ───────────────
 
   const handleCrossRefNavigate = useCallback((targetBook, targetChapter, targetVerse) => {
@@ -505,6 +563,12 @@ export default function Reader() {
         return;
       }
 
+      if (e.key === 'p' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        toggleParallel();
+        return;
+      }
+
       if (e.key === 'f' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         openSearch();
@@ -544,7 +608,7 @@ export default function Reader() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [navigate, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, openNoteEditor, openSearch, toggleWordFreq, navigateBack]);
+  }, [navigate, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, openNoteEditor, toggleParallel, openSearch, toggleWordFreq, navigateBack]);
 
   // ── Get cross-refs for selected verse ────────────────────────────────
 
@@ -570,7 +634,7 @@ export default function Reader() {
   }
 
   return (
-    <div className={`reader${isDesktop && hasRefs ? ' with-refs' : ''}`}>
+    <div className={`reader${isDesktop && hasRefs ? ' with-refs' : ''}${parallelMode ? ' parallel' : ''}`}>
       {isDesktop && (
         <PriorColumn
           entries={prior}
@@ -654,6 +718,51 @@ export default function Reader() {
           />
         )}
       </div>
+
+      {parallelMode && (
+        <div className="reader-scroll parallel-scroll" ref={parallelScrollRef}>
+          <div className="parallel-header">
+            <select
+              className="translation-picker"
+              value={parallelTranslation}
+              onChange={(e) => setParallelTranslation(e.target.value)}
+              aria-label="Parallel translation"
+            >
+              {meta?.translations?.filter(t => t.id !== translation).map(t => (
+                <option key={t.id} value={t.id}>{t.id}</option>
+              ))}
+            </select>
+          </div>
+          <div className="reader-content">
+            {blocks.map((block, i) => {
+              const key = `${block.bookAbbr}.${block.chapter}`;
+              const verses = parallelVerseMap.get(key);
+              if (!verses) return null;
+
+              const showBookHeading =
+                block.chapter === 1 ||
+                (i > 0 && blocks[i - 1].bookAbbr !== block.bookAbbr);
+
+              return (
+                <section key={key} className="chapter">
+                  {showBookHeading && (
+                    <h2 className="book-heading">{block.bookName}</h2>
+                  )}
+                  <h3 className="chapter-heading">{block.chapter}</h3>
+                  <div className="chapter-text">
+                    {verses.map(v => (
+                      <span key={v.v} className="verse">
+                        <sup className="verse-num">{v.v}</sup>
+                        {v.t}{' '}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {isDesktop && (
         <LaterColumn
