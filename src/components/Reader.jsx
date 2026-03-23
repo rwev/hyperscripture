@@ -3,6 +3,7 @@ import { useReader } from '../context/ReaderContext';
 import { useBibleText } from '../hooks/useBibleText';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { useCrossRefs } from '../hooks/useCrossRefs';
+import { useNotes } from '../hooks/useNotes';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { getBookByAbbr, getNextBook, getPrevBook, makeVerseId, bookAbbrToSlug } from '../utils/bible';
 import { scrollToVerse } from '../utils/scroll';
@@ -32,6 +33,7 @@ export default function Reader() {
 
   const { loadBook, getVerses } = useBibleText();
   const { bookmarks, toggle: toggleBookmark } = useBookmarks();
+  const { notes, getNote, setNote } = useNotes();
   const { loadRefs, getRefsForVerse } = useCrossRefs();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
 
@@ -375,6 +377,26 @@ export default function Reader() {
     showToast(added ? `Bookmarked ${citation}` : `Removed ${citation}`);
   }, [toggleBookmark, showToast]);
 
+  // ── Note editor ────────────────────────────────────────────────────
+
+  const [noteEditing, setNoteEditing] = useState(null); // verseId being edited
+  const noteTextRef = useRef('');
+
+  const openNoteEditor = useCallback(() => {
+    const sv = selectedVerseRef.current;
+    if (!sv) return;
+    const verseId = makeVerseId(sv.book, sv.chapter, sv.verse);
+    noteTextRef.current = getNote(verseId);
+    setNoteEditing(verseId);
+  }, [getNote]);
+
+  const closeNoteEditor = useCallback(() => {
+    if (noteEditing) {
+      setNote(noteEditing, noteTextRef.current);
+    }
+    setNoteEditing(null);
+  }, [noteEditing, setNote]);
+
   // ── Cross-reference navigation (navigate + re-select) ───────────────
 
   const handleCrossRefNavigate = useCallback((targetBook, targetChapter, targetVerse) => {
@@ -430,7 +452,7 @@ export default function Reader() {
 
   useEffect(() => {
     const handler = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
       const b = bookRef.current;
       const ch = chapterRef.current;
 
@@ -454,6 +476,14 @@ export default function Reader() {
         if (selectedVerseRef.current) {
           e.preventDefault();
           bookmarkSelectedVerse();
+        }
+        return;
+      }
+
+      if (e.key === 'n' && !e.metaKey && !e.ctrlKey) {
+        if (selectedVerseRef.current) {
+          e.preventDefault();
+          openNoteEditor();
         }
         return;
       }
@@ -485,7 +515,7 @@ export default function Reader() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [navigate, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, navigateBack]);
+  }, [navigate, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, openNoteEditor, navigateBack]);
 
   // ── Get cross-refs for selected verse ────────────────────────────────
 
@@ -557,6 +587,7 @@ export default function Reader() {
                 selectedVerseNum={selectedVerse?.verse}
                 onSelectVerse={selectVerse}
                 bookmarks={bookmarks}
+                notes={notes}
               />
             );
           })}
@@ -580,6 +611,29 @@ export default function Reader() {
           loading={laterLoading}
           onNavigate={handleCrossRefNavigate}
         />
+      )}
+
+      {noteEditing && (
+        <div className="note-editor" key={noteEditing}>
+          <div className="note-editor-header">
+            <span className="note-editor-label">Note</span>
+            <button className="note-editor-close" onClick={closeNoteEditor} aria-label="Close note">&times;</button>
+          </div>
+          <textarea
+            className="note-editor-input"
+            defaultValue={noteTextRef.current}
+            onChange={(e) => { noteTextRef.current = e.target.value; }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                closeNoteEditor();
+              }
+            }}
+            placeholder="Write a note..."
+            autoFocus
+            rows={3}
+          />
+        </div>
       )}
 
       {toast && (

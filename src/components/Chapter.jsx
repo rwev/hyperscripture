@@ -21,6 +21,7 @@ const Chapter = memo(function Chapter({
   selectedVerseNum,
   onSelectVerse,
   bookmarks,
+  notes,
 }) {
   const isSelectedChapter = selectedBook === bookAbbr && selectedChapter === chapter;
 
@@ -73,6 +74,7 @@ const Chapter = memo(function Chapter({
               refCount={refs?.length || 0}
               isSelected={isSelected}
               isBookmarked={bookmarks?.has(makeVerseId(bookAbbr, chapter, v.v)) || false}
+              hasNote={notes?.has(makeVerseId(bookAbbr, chapter, v.v)) || false}
               onSelect={onSelectVerse}
             />
           );

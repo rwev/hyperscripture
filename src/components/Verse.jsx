@@ -4,7 +4,7 @@ import { makeVerseId } from '../utils/bible';
 /**
  * A single Bible verse with cross-reference indicator.
  */
-const Verse = memo(function Verse({ bookAbbr, chapter, verse, text, hasRefs, refCount, isSelected, isBookmarked, onSelect }) {
+const Verse = memo(function Verse({ bookAbbr, chapter, verse, text, hasRefs, refCount, isSelected, isBookmarked, hasNote, onSelect }) {
   const verseId = makeVerseId(bookAbbr, chapter, verse);
 
   return (
@@ -15,7 +15,7 @@ const Verse = memo(function Verse({ bookAbbr, chapter, verse, text, hasRefs, ref
       data-bookmarked={isBookmarked || undefined}
     >
       <sup
-        className={`verse-num${hasRefs ? ' has-refs' : ''}${isBookmarked ? ' bookmarked' : ''}`}
+        className={`verse-num${hasRefs ? ' has-refs' : ''}${isBookmarked ? ' bookmarked' : ''}${hasNote ? ' has-note' : ''}`}
         onClick={(e) => {
           e.stopPropagation();
           onSelect(bookAbbr, chapter, verse);
