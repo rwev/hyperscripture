@@ -981,3 +981,94 @@
 ::selection {
   background: var(--highlight-flash);
 }
+
+/* ── Print ────────────────────────────────────────────────────────── */
+
+@media print {
+  *,
+  *::before,
+  *::after {
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .app-header,
+  .crossref-col,
+  .crossref-mobile,
+  .trail-back,
+  .copy-toast,
+  .nav-overlay,
+  .quicknav-overlay,
+  .scroll-sentinel,
+  .reader-scroll::before {
+    display: none !important;
+  }
+
+  .app {
+    height: auto;
+    overflow: visible;
+  }
+
+  .app-main {
+    overflow: visible;
+  }
+
+  .reader,
+  .reader-scroll,
+  .reader-content {
+    height: auto;
+    overflow: visible;
+    max-width: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .reader-content {
+    max-width: 42em;
+  }
+
+  .chapter {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 2em;
+  }
+
+  .book-heading {
+    font-size: 10pt;
+    margin: 2em 0 1em;
+  }
+
+  .book-heading::before,
+  .book-heading::after {
+    display: none;
+  }
+
+  .chapter-heading {
+    font-size: 24pt;
+    cursor: default;
+  }
+
+  .chapter-text {
+    font-size: 11pt;
+    line-height: 1.7;
+  }
+
+  .verse-num {
+    font-size: 7pt;
+    color: #666 !important;
+    cursor: default;
+  }
+
+  .verse[data-selected],
+  .verse[data-bookmarked] {
+    background: none !important;
+  }
+
+  @page {
+    margin: 2cm;
+  }
+}
