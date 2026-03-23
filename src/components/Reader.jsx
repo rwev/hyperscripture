@@ -289,6 +289,38 @@ export default function Reader() {
     return () => scrollEl.removeEventListener('scroll', handler);
   }, [initialScrollDone, setChapter]);
 
+  // ── Copy verse to clipboard ─────────────────────────────────────────
+
+  const [copyToast, setCopyToast] = useState(null);
+  const copyTimerRef = useRef(null);
+
+  const copySelectedVerse = useCallback(() => {
+    const sv = selectedVerseRef.current;
+    if (!sv) return;
+
+    const currentBlocks = blocksRef.current;
+    const block = currentBlocks.find(
+      b => b.bookAbbr === sv.book && b.chapter === sv.chapter
+    );
+    if (!block) return;
+
+    const verseData = block.verses.find(v => v.v === sv.verse);
+    if (!verseData) return;
+
+    const bookMeta = getBookByAbbr(sv.book);
+    const bookName = bookMeta ? bookMeta.name : sv.book;
+    const citation = `${bookName} ${sv.chapter}:${sv.verse}`;
+    const text = `${verseData.t}\n— ${citation} (${translation})`;
+
+    navigator.clipboard.writeText(text).then(() => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      setCopyToast(citation);
+      copyTimerRef.current = setTimeout(() => setCopyToast(null), 2000);
+    }).catch(() => {
+      // Clipboard API unavailable; degrade silently
+    });
+  }, [translation]);
+
   // ── Keyboard navigation (uses refs to avoid listener churn) ──────────
 
   useEffect(() => {
@@ -296,6 +328,14 @@ export default function Reader() {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
       const b = bookRef.current;
       const ch = chapterRef.current;
+
+      if (e.key === 'c' && !e.metaKey && !e.ctrlKey) {
+        if (selectedVerseRef.current) {
+          e.preventDefault();
+          copySelectedVerse();
+        }
+        return;
+      }
 
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
@@ -319,7 +359,7 @@ export default function Reader() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [navigate]);
+  }, [navigate, copySelectedVerse]);
 
   // ── Cross-reference navigation (navigate + re-select) ───────────────
 
@@ -416,6 +456,12 @@ export default function Reader() {
           loading={laterLoading}
           onNavigate={handleCrossRefNavigate}
         />
+      )}
+
+      {copyToast && (
+        <div className="copy-toast" key={copyToast}>
+          Copied {copyToast}
+        </div>
       )}
     </div>
   );
