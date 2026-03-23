@@ -286,6 +286,15 @@ export default function Reader() {
             lastUpdate = now;
             setChapter(ch, bookAbbr);
             // URL sync is handled by HashRouter via replaceState
+
+            // Update progress bar (chapter position within book)
+            const bookMeta = getBookByAbbr(bookAbbr);
+            if (bookMeta && scrollRef.current) {
+              const progress = bookMeta.chapters > 1
+                ? (ch - 1) / (bookMeta.chapters - 1)
+                : 1;
+              scrollRef.current.style.setProperty('--progress', progress);
+            }
           }
         }
       });
