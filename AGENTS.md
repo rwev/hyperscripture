@@ -45,7 +45,7 @@ src/
     AppHeader.jsx            # Header bar with nav trigger and search
     Bookmarks.jsx            # Full-screen bookmarks overlay (Shift+B)
     Chapter.jsx              # Renders a single Bible chapter
-    CrossRefColumns.jsx      # Desktop cross-ref side columns + useCrossRefColumns hook
+    CrossRefColumns.jsx      # Desktop cross-ref side columns + chain depth indicator
     CrossRefMobile.jsx       # Mobile cross-ref popover
     ErrorBoundary.jsx        # Class-based React error boundary
     HashRouter.jsx           # Hash-based URL <-> state sync + position persistence + VOTD
