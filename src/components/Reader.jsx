@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useReader } from '../context/ReaderContext';
 import { useBibleText } from '../hooks/useBibleText';
+import { useBookmarks } from '../hooks/useBookmarks';
 import { useCrossRefs } from '../hooks/useCrossRefs';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { getBookByAbbr, getNextBook, getPrevBook, makeVerseId, bookAbbrToSlug } from '../utils/bible';
@@ -30,6 +31,7 @@ export default function Reader() {
   } = useReader();
 
   const { loadBook, getVerses } = useBibleText();
+  const { bookmarks, toggle: toggleBookmark } = useBookmarks();
   const { loadRefs, getRefsForVerse } = useCrossRefs();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
 
@@ -349,6 +351,21 @@ export default function Reader() {
     });
   }, [showToast]);
 
+  // ── Bookmark selected verse ─────────────────────────────────────────
+
+  const bookmarkSelectedVerse = useCallback(() => {
+    const sv = selectedVerseRef.current;
+    if (!sv) return;
+
+    const verseId = makeVerseId(sv.book, sv.chapter, sv.verse);
+    const added = toggleBookmark(verseId);
+
+    const bookMeta = getBookByAbbr(sv.book);
+    const bookName = bookMeta ? bookMeta.name : sv.book;
+    const citation = `${bookName} ${sv.chapter}:${sv.verse}`;
+    showToast(added ? `Bookmarked ${citation}` : `Removed ${citation}`);
+  }, [toggleBookmark, showToast]);
+
   // ── Cross-reference navigation (navigate + re-select) ───────────────
 
   const handleCrossRefNavigate = useCallback((targetBook, targetChapter, targetVerse) => {
@@ -424,6 +441,14 @@ export default function Reader() {
         return;
       }
 
+      if (e.key === 'm' && !e.metaKey && !e.ctrlKey) {
+        if (selectedVerseRef.current) {
+          e.preventDefault();
+          bookmarkSelectedVerse();
+        }
+        return;
+      }
+
       if (e.key === 'b' && !e.metaKey && !e.ctrlKey) {
         navigateBack();
         return;
@@ -451,7 +476,7 @@ export default function Reader() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [navigate, copySelectedVerse, shareSelectedVerse, navigateBack]);
+  }, [navigate, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, navigateBack]);
 
   // ── Get cross-refs for selected verse ────────────────────────────────
 
@@ -522,6 +547,7 @@ export default function Reader() {
                 selectedChapter={selectedVerse?.chapter}
                 selectedVerseNum={selectedVerse?.verse}
                 onSelectVerse={selectVerse}
+                bookmarks={bookmarks}
               />
             );
           })}

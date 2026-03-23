@@ -6,6 +6,7 @@ import AppHeader from './components/AppHeader';
 import HashRouter from './components/HashRouter';
 import ErrorBoundary from './components/ErrorBoundary';
 import QuickNav from './components/QuickNav';
+import Bookmarks from './components/Bookmarks';
 import { makeVerseId } from './utils/bible';
 import { scrollToVerse } from './utils/scroll';
 
@@ -53,6 +54,7 @@ function getInitialFontIndex() {
 function AppInner() {
   const { navigate, navOpen, meta, error } = useReader();
   const [quickNavOpen, setQuickNavOpen] = useState(false);
+  const [bookmarksOpen, setBookmarksOpen] = useState(false);
   const navOpenRef = useRef(navOpen);
 
   // Keep ref in sync to avoid reinstalling the keydown listener on navOpen changes
@@ -102,6 +104,10 @@ function AppInner() {
     setQuickNavOpen(false);
   }, []);
 
+  const closeBookmarks = useCallback(() => {
+    setBookmarksOpen(false);
+  }, []);
+
   const handleQuickNavigate = useCallback((abbr, chapter, verse) => {
     navigate(abbr, chapter);
     if (verse) {
@@ -121,6 +127,9 @@ function AppInner() {
       if (e.key === '/') {
         e.preventDefault();
         setQuickNavOpen(true);
+      } else if (e.key === 'B') {
+        e.preventDefault();
+        setBookmarksOpen(true);
       } else if (e.key === 'd' && !e.metaKey && !e.ctrlKey) {
         toggleTheme();
       } else if ((e.key === '+' || e.key === '=') && !e.metaKey && !e.ctrlKey) {
@@ -162,6 +171,12 @@ function AppInner() {
           <QuickNav
             onNavigate={handleQuickNavigate}
             onClose={closeQuickNav}
+          />
+        )}
+        {bookmarksOpen && (
+          <Bookmarks
+            onNavigate={handleQuickNavigate}
+            onClose={closeBookmarks}
           />
         )}
       </div>

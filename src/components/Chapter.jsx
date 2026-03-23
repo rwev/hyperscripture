@@ -1,4 +1,5 @@
 import { memo, useCallback } from 'react';
+import { makeVerseId } from '../utils/bible';
 import Verse from './Verse';
 
 /**
@@ -19,6 +20,7 @@ const Chapter = memo(function Chapter({
   selectedChapter,
   selectedVerseNum,
   onSelectVerse,
+  bookmarks,
 }) {
   const isSelectedChapter = selectedBook === bookAbbr && selectedChapter === chapter;
 
@@ -70,6 +72,7 @@ const Chapter = memo(function Chapter({
               hasRefs={!!refs && refs.length > 0}
               refCount={refs?.length || 0}
               isSelected={isSelected}
+              isBookmarked={bookmarks?.has(makeVerseId(bookAbbr, chapter, v.v)) || false}
               onSelect={onSelectVerse}
             />
           );
