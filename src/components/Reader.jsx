@@ -40,6 +40,9 @@ export default function Reader() {
   const { loadRefs, getRefsForVerse } = useCrossRefs();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
 
+  // ── Verse-per-line mode ──────────────────────────────────────────────
+  const [versePerLine, setVersePerLine] = useState(false);
+
   // ── Parallel translation ────────────────────────────────────────────
   const [parallelMode, setParallelMode] = useState(false);
   const [parallelTranslation, setParallelTranslation] = useState(() => {
@@ -563,6 +566,15 @@ export default function Reader() {
         return;
       }
 
+      if (e.key === 'l' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setVersePerLine(prev => {
+          showToast(prev ? 'Prose mode' : 'Verse-per-line');
+          return !prev;
+        });
+        return;
+      }
+
       if (e.key === 'p' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         toggleParallel();
@@ -608,7 +620,7 @@ export default function Reader() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [navigate, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, openNoteEditor, toggleParallel, openSearch, toggleWordFreq, navigateBack]);
+  }, [navigate, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, openNoteEditor, showToast, toggleParallel, openSearch, toggleWordFreq, navigateBack]);
 
   // ── Get cross-refs for selected verse ────────────────────────────────
 
@@ -683,7 +695,7 @@ export default function Reader() {
 
       <div className="reader-scroll" ref={scrollRef}>
         <div ref={topSentinelRef} className="scroll-sentinel" />
-        <div className="reader-content" ref={contentRef}>
+        <div className={`reader-content${versePerLine ? ' verse-per-line' : ''}`} ref={contentRef}>
           {blocks.map((block, i) => {
             const showBookHeading =
               block.chapter === 1 ||

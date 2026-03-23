@@ -425,6 +425,17 @@
   -webkit-hyphens: auto;
 }
 
+.verse-per-line .chapter-text {
+  text-align: left;
+}
+
+.verse-per-line .verse {
+  display: block;
+  padding-left: 1.5em;
+  text-indent: -1.5em;
+  margin-bottom: 0.15em;
+}
+
 /* ── Verse ─────────────────────────────────────────────────────────── */
 
 .verse {

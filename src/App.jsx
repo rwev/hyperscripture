@@ -216,6 +216,7 @@ function AppInner() {
                 <div className="help-section">
                   <div className="help-section-title">Display</div>
                   <div className="help-row"><kbd>d</kbd><span>Toggle dark mode</span></div>
+                  <div className="help-row"><kbd>l</kbd><span>Verse-per-line / prose</span></div>
                   <div className="help-row"><kbd>p</kbd><span>Parallel translation</span></div>
                   <div className="help-row"><kbd>w</kbd><span>Word frequency patterns</span></div>
                   <div className="help-row"><kbd>+</kbd> <kbd>-</kbd><span>Font size</span></div>
