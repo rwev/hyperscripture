@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useCallback } from 'react';
+import { memo, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { getBookByAbbr } from '../utils/bible';
 import { importUserData } from '../utils/userdata';
@@ -41,7 +41,10 @@ const Bookmarks = memo(function Bookmarks({ onNavigate, onClose }) {
   const { bookmarks, toggle } = useBookmarks();
   const overlayRef = useRef(null);
   const fileInputRef = useRef(null);
-  const entries = [...bookmarks].map(id => ({ id, ...parseVerseId(id) })).filter(e => e.book);
+  const entries = useMemo(
+    () => [...bookmarks].map(id => ({ id, ...parseVerseId(id) })).filter(e => e.book),
+    [bookmarks]
+  );
 
   const handleImport = useCallback(() => {
     fileInputRef.current?.click();
@@ -78,10 +81,10 @@ const Bookmarks = memo(function Bookmarks({ onNavigate, onClose }) {
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  const handleClick = (entry) => {
+  const handleClick = useCallback((entry) => {
     onClose();
     onNavigate(entry.book, entry.chapter, entry.verse);
-  };
+  }, [onClose, onNavigate]);
 
   return (
     <div className="nav-overlay" ref={overlayRef} onClick={(e) => {

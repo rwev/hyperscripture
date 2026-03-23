@@ -1,3 +1,6 @@
+const SWIPE_MIN_DISTANCE_PX = 80;
+const SWIPE_MAX_ANGLE_RATIO = 0.6;
+
 /**
  * Keyboard and touch gesture handler for the Reader component.
  *
@@ -171,8 +174,8 @@ export function useReaderKeys({
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
 
-      // Require horizontal swipe: >80px horizontal, angle < 30° from horizontal
-      if (Math.abs(dx) < 80 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+      // Require horizontal swipe: sufficient distance, angle < 30° from horizontal
+      if (Math.abs(dx) < SWIPE_MIN_DISTANCE_PX || Math.abs(dy) > Math.abs(dx) * SWIPE_MAX_ANGLE_RATIO) return;
 
       if (dx > 0) {
         navigatePrev();

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useReader } from '../context/ReaderContext';
 
 /**
@@ -44,10 +44,10 @@ export default function Navigation() {
     navigate(bookAbbr, chapter);
   }, [navigate]);
 
-  if (!navOpen || !meta) return null;
+  const otBooks = useMemo(() => meta ? meta.books.filter(b => b.testament === 'OT') : [], [meta]);
+  const ntBooks = useMemo(() => meta ? meta.books.filter(b => b.testament === 'NT') : [], [meta]);
 
-  const otBooks = meta.books.filter(b => b.testament === 'OT');
-  const ntBooks = meta.books.filter(b => b.testament === 'NT');
+  if (!navOpen || !meta) return null;
 
   const renderBookList = (books) => (
     <ul className="nav-book-list">

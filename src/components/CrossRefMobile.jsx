@@ -4,10 +4,12 @@ import { partitionRefs } from '../utils/crossref';
 import { useRefTexts } from '../hooks/useRefTexts';
 import { useReader } from '../context/ReaderContext';
 
+const MAX_REFS_PER_SECTION = 25;
+
 /**
  * Mobile cross-reference popover with Prior / Later sections.
  */
-const CrossRefMobile = memo(function CrossRefMobile({ verse, refs, onNavigate, onClose }) {
+const CrossRefMobile = memo(function CrossRefMobile({ verse, refs, onNavigate, onClose, scrollContainerRef, contentRef: readerContentRef }) {
   const popoverRef = useRef(null);
   const { translation } = useReader();
 
@@ -16,8 +18,8 @@ const CrossRefMobile = memo(function CrossRefMobile({ verse, refs, onNavigate, o
     [refs, verse]
   );
 
-  const cappedPrior = useMemo(() => prior.slice(0, 25), [prior]);
-  const cappedLater = useMemo(() => later.slice(0, 25), [later]);
+  const cappedPrior = useMemo(() => prior.slice(0, MAX_REFS_PER_SECTION), [prior]);
+  const cappedLater = useMemo(() => later.slice(0, MAX_REFS_PER_SECTION), [later]);
 
   const priorRefArr = useMemo(() => cappedPrior.map(p => [p.ref, p.votes]), [cappedPrior]);
   const laterRefArr = useMemo(() => cappedLater.map(l => [l.ref, l.votes]), [cappedLater]);
@@ -32,7 +34,7 @@ const CrossRefMobile = memo(function CrossRefMobile({ verse, refs, onNavigate, o
     const verseEl = document.getElementById(verseId);
     if (!verseEl) return;
 
-    const scrollContainer = document.querySelector('.reader-scroll');
+    const scrollContainer = scrollContainerRef?.current;
     if (!scrollContainer) return;
 
     const rect = verseEl.getBoundingClientRect();
@@ -41,13 +43,13 @@ const CrossRefMobile = memo(function CrossRefMobile({ verse, refs, onNavigate, o
 
     popover.style.top = `${rect.bottom - containerRect.top + scrollContainer.scrollTop + 8}px`;
 
-    const readerContent = document.querySelector('.reader-content');
+    const readerContent = readerContentRef?.current;
     if (readerContent) {
       const contentRect = readerContent.getBoundingClientRect();
       popover.style.left = `${contentRect.left - containerRect.left}px`;
       popover.style.width = `${contentRect.width}px`;
     }
-  }, [verse]);
+  }, [verse, scrollContainerRef, readerContentRef]);
 
   // Close on Escape
   useEffect(() => {
@@ -120,7 +122,7 @@ const CrossRefMobile = memo(function CrossRefMobile({ verse, refs, onNavigate, o
       </div>
       {renderSection('Prior in Scripture', cappedPrior, priorTexts)}
       {renderSection('Later in Scripture', cappedLater, laterTexts)}
-      {(prior.length > 25 || later.length > 25) && (
+      {(prior.length > MAX_REFS_PER_SECTION || later.length > MAX_REFS_PER_SECTION) && (
         <div className="crossref-mobile-overflow">
           {refs.length} total references
         </div>

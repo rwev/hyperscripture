@@ -5,7 +5,7 @@
  * toggle operations. State changes trigger re-renders.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 const STORAGE_KEY = 'hyperscripture:bookmarks';
 
@@ -44,16 +44,17 @@ function saveBookmarks(bookmarks) {
  */
 export function useBookmarks() {
   const [bookmarks, setBookmarks] = useState(loadBookmarks);
+  const bookmarksRef = useRef(bookmarks);
+  useEffect(() => { bookmarksRef.current = bookmarks; }, [bookmarks]);
 
   const toggle = useCallback((verseId) => {
-    let added = false;
+    const added = !bookmarksRef.current.has(verseId);
     setBookmarks(prev => {
       const next = new Set(prev);
-      if (next.has(verseId)) {
-        next.delete(verseId);
-      } else {
+      if (added) {
         next.add(verseId);
-        added = true;
+      } else {
+        next.delete(verseId);
       }
       saveBookmarks(next);
       return next;

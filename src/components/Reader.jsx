@@ -16,6 +16,10 @@ import { useCrossRefColumns, PriorColumn, LaterColumn } from './CrossRefColumns'
 import CrossRefMobile from './CrossRefMobile';
 
 const EMPTY_REFS = [];
+const TRANSLATION_OPTIONS = ['ESV', 'KJV', 'NIV', 'AMP'];
+const PREFETCH_MARGIN_PX = '400px';
+const SCROLL_THROTTLE_MS = 300;
+const SCROLL_TOP_THRESHOLD_PX = 100;
 
 /**
  * Main reader component with infinite scroll and cross-reference integration.
@@ -47,8 +51,7 @@ export default function Reader() {
   // ── Parallel translation ────────────────────────────────────────────
   const [parallelMode, setParallelMode] = useState(false);
   const [parallelTranslation, setParallelTranslation] = useState(() => {
-    const options = ['ESV', 'KJV', 'NIV', 'AMP'];
-    return options.find(t => t !== 'ESV') || 'KJV';
+    return TRANSLATION_OPTIONS.find(t => t !== 'ESV') || 'KJV';
   });
   const parallelScrollRef = useRef(null);
 
@@ -87,23 +90,23 @@ export default function Reader() {
     const bookMeta = getBookByAbbr(bookAbbr);
     if (!bookMeta) return null;
 
-    const bookData = await loadBook(translation, bookMeta.file);
-    const verses = getVerses(bookData, chapterNum);
+    const [bookResult, refsResult] = await Promise.allSettled([
+      loadBook(translation, bookMeta.file),
+      loadRefs(bookAbbr),
+    ]);
+
+    if (bookResult.status === 'rejected') return null;
+    const verses = getVerses(bookResult.value, chapterNum);
     if (!verses || verses.length === 0) return null;
 
-    let crossRefs = {};
-    try {
-      crossRefs = await loadRefs(bookAbbr);
-    } catch {
-      // Cross-ref load failed; degrade gracefully with empty refs
-    }
+    const crossRefs = refsResult.status === 'fulfilled' ? (refsResult.value || {}) : {};
 
     return {
       bookAbbr,
       bookName: bookMeta.name,
       chapter: chapterNum,
       verses,
-      crossRefs: crossRefs || {},
+      crossRefs,
     };
   }, [translation, loadBook, getVerses, loadRefs]);
 
@@ -139,11 +142,10 @@ export default function Reader() {
         chaptersToLoad.push({ bookAbbr: currentBook, chapter: ch });
       }
 
-      const loaded = [];
-      for (const { bookAbbr, chapter: ch } of chaptersToLoad) {
-        const block = await loadChapterBlock(bookAbbr, ch);
-        if (block && !cancelled) loaded.push(block);
-      }
+      const results = await Promise.all(
+        chaptersToLoad.map(({ bookAbbr, chapter: ch }) => loadChapterBlock(bookAbbr, ch))
+      );
+      const loaded = results.filter(block => block != null && !cancelled);
 
       if (!cancelled) {
         setBlocks(loaded);
@@ -245,7 +247,7 @@ export default function Reader() {
 
     const options = {
       root: scrollRef.current,
-      rootMargin: '400px',
+      rootMargin: PREFETCH_MARGIN_PX,
       threshold: 0,
     };
 
@@ -283,7 +285,7 @@ export default function Reader() {
         ticking = false;
 
         const now = Date.now();
-        if (now - lastUpdate < 300) return;
+        if (now - lastUpdate < SCROLL_THROTTLE_MS) return;
 
         const chapters = scrollEl.querySelectorAll('.chapter');
         const containerTop = scrollEl.getBoundingClientRect().top;
@@ -291,7 +293,7 @@ export default function Reader() {
         let currentSection = null;
         for (const ch of chapters) {
           const rect = ch.getBoundingClientRect();
-          if (rect.top - containerTop <= 100) {
+          if (rect.top - containerTop <= SCROLL_TOP_THRESHOLD_PX) {
             currentSection = ch;
           }
         }
@@ -439,8 +441,7 @@ export default function Reader() {
     setParallelMode(prev => {
       // When enabling, ensure parallel translation differs from primary
       if (!prev && parallelTranslation === translation) {
-        const options = ['ESV', 'KJV', 'NIV', 'AMP'];
-        const alt = options.find(t => t !== translation);
+        const alt = TRANSLATION_OPTIONS.find(t => t !== translation);
         if (alt) setParallelTranslation(alt);
       }
       showToast(prev ? 'Parallel off' : 'Parallel on');
@@ -653,6 +654,8 @@ export default function Reader() {
             refs={selectedRefs}
             onNavigate={handleCrossRefNavigate}
             onClose={deselectVerse}
+            scrollContainerRef={scrollRef}
+            contentRef={contentRef}
           />
         )}
       </div>

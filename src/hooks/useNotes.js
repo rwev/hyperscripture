@@ -5,7 +5,7 @@
  * get/set operations. State changes trigger re-renders.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 const STORAGE_KEY = 'hyperscripture:notes';
 
@@ -44,10 +44,12 @@ function saveNotes(notes) {
  */
 export function useNotes() {
   const [notes, setNotes] = useState(loadNotes);
+  const notesRef = useRef(notes);
+  useEffect(() => { notesRef.current = notes; }, [notes]);
 
   const getNote = useCallback((verseId) => {
-    return notes.get(verseId) || '';
-  }, [notes]);
+    return notesRef.current.get(verseId) || '';
+  }, []);
 
   const setNote = useCallback((verseId, text) => {
     setNotes(prev => {
