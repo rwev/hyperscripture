@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { resolveInput } from '../utils/fuzzyBook';
+import { getBookByAbbr } from '../utils/bible';
+import { recordVisit, loadRecent } from '../utils/recent';
 
 /**
  * Command-palette style fuzzy-find overlay for quick Bible navigation.
@@ -9,8 +11,13 @@ export default function QuickNav({ onNavigate, onClose }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [recents] = useState(loadRecent);
   const inputRef = useRef(null);
   const overlayRef = useRef(null);
+
+  // Items to display: search results when typing, recents when empty
+  const showRecents = !query.trim() && recents.length > 0;
+  const displayItems = showRecents ? recents : results;
 
   // Focus input on mount
   useEffect(() => {
@@ -32,27 +39,6 @@ export default function QuickNav({ onNavigate, onClose }) {
     }
   }, []);
 
-  // Close on Escape, navigate on Enter, arrow keys for selection
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      onClose();
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (results.length > 0) {
-        const selected = results[selectedIndex] || results[0];
-        onNavigate(selected.abbr, selected.chapter, selected.verse);
-        onClose();
-      }
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIndex(i => Math.min(i + 1, results.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIndex(i => Math.max(i - 1, 0));
-    }
-  }, [results, selectedIndex, onNavigate, onClose]);
-
   // Close on click outside the palette
   useEffect(() => {
     const handler = (e) => {
@@ -65,9 +51,36 @@ export default function QuickNav({ onNavigate, onClose }) {
   }, [onClose]);
 
   const handleItemClick = useCallback((result) => {
+    // Build display label for recording
+    const bookMeta = getBookByAbbr(result.abbr);
+    const name = bookMeta?.name || result.name || result.abbr;
+    const display = result.verse
+      ? `${name} ${result.chapter}:${result.verse}`
+      : `${name} ${result.chapter}`;
+    recordVisit(result.abbr, result.chapter, result.verse, display);
     onNavigate(result.abbr, result.chapter, result.verse);
     onClose();
   }, [onNavigate, onClose]);
+
+  // Close on Escape, navigate on Enter, arrow keys for selection
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (displayItems.length > 0) {
+        const selected = displayItems[selectedIndex] || displayItems[0];
+        handleItemClick(selected);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex(i => Math.min(i + 1, displayItems.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex(i => Math.max(i - 1, 0));
+    }
+  }, [displayItems, selectedIndex, handleItemClick, onClose]);
 
   return (
     <div className="quicknav-overlay" ref={overlayRef}>
@@ -87,9 +100,12 @@ export default function QuickNav({ onNavigate, onClose }) {
             autoCapitalize="off"
           />
         </div>
-        {results.length > 0 && (
+        {displayItems.length > 0 && (
           <ul className="quicknav-results">
-            {results.map((r, i) => (
+            {showRecents && (
+              <li className="quicknav-section-label">Recent</li>
+            )}
+            {displayItems.map((r, i) => (
               <li
                 key={`${r.abbr}-${r.chapter}-${r.verse}`}
                 className={`quicknav-item${i === selectedIndex ? ' selected' : ''}`}

@@ -195,6 +195,16 @@
   color: var(--text-faint);
 }
 
+.quicknav-section-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: var(--space-xs) var(--space-md);
+}
+
 .quicknav-empty {
   padding: var(--space-sm) var(--space-md);
   font-family: var(--font-sans);
