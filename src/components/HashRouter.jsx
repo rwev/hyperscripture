@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useReader } from '../context/ReaderContext';
 import { slugToBookAbbr, makeVerseId, bookAbbrToSlug, getBookByAbbr } from '../utils/bible';
 import { scrollToVerse } from '../utils/scroll';
+import { getVerseOfTheDay } from '../utils/votd';
 
 // ── Reading position persistence ──────────────────────────────────────────
 
@@ -58,14 +59,21 @@ export default function HashRouter() {
     const handleHash = () => {
       const hash = window.location.hash.replace(/^#\/?/, '');
       if (!hash) {
-        // No hash present: resume saved position, or fall back to Genesis 1
+        // No hash present: resume saved position, or land on verse-of-the-day
         if (!initialNavDone.current) {
           initialNavDone.current = true;
           const saved = loadPosition();
-          const startBook = saved?.book ?? meta.books[0].abbr;
-          const startChapter = saved?.chapter ?? 1;
-          navigate(startBook, startChapter);
-          history.replaceState(null, '', `#/${bookAbbrToSlug(startBook)}/${startChapter}`);
+          if (saved) {
+            navigate(saved.book, saved.chapter);
+            history.replaceState(null, '', `#/${bookAbbrToSlug(saved.book)}/${saved.chapter}`);
+          } else {
+            const votd = getVerseOfTheDay();
+            navigate(votd.book, votd.chapter);
+            history.replaceState(null, '', `#/${bookAbbrToSlug(votd.book)}/${votd.chapter}/${votd.verse}`);
+            scrollToVerse(makeVerseId(votd.book, votd.chapter, votd.verse), {
+              onFound: () => selectVerse(votd.book, votd.chapter, votd.verse),
+            });
+          }
         }
         return;
       }
