@@ -1063,6 +1063,98 @@
 
 /* ── Selection ─────────────────────────────────────────────────────── */
 
+/* ── Help Overlay ─────────────────────────────────────────────────── */
+
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(40, 30, 20, 0.3);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 10vh;
+  animation: quicknav-backdrop-in 0.12s ease-out;
+}
+
+.help-panel {
+  width: 100%;
+  max-width: 420px;
+  background: var(--popover-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 40px var(--shadow), 0 2px 8px var(--shadow);
+  overflow: hidden;
+  animation: quicknav-palette-in 0.15s ease-out;
+}
+
+.help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border);
+}
+
+.help-title {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.help-body {
+  padding: var(--space-sm) 0;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.help-section {
+  padding: var(--space-xs) var(--space-md) var(--space-sm);
+}
+
+.help-section-title {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: var(--space-xs) 0;
+}
+
+.help-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 3px 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.help-row kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  height: 1.5em;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.help-row span {
+  margin-left: auto;
+  text-align: right;
+}
+
 ::highlight(word-freq) {
   background: var(--highlight);
   color: inherit;
@@ -1094,6 +1186,7 @@
   .note-editor,
   .nav-overlay,
   .quicknav-overlay,
+  .help-overlay,
   .scroll-sentinel,
   .reader-scroll::before {
     display: none !important;

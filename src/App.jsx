@@ -55,6 +55,7 @@ function AppInner() {
   const { navigate, navOpen, meta, error } = useReader();
   const [quickNavOpen, setQuickNavOpen] = useState(false);
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const navOpenRef = useRef(navOpen);
 
   // Keep ref in sync to avoid reinstalling the keydown listener on navOpen changes
@@ -120,11 +121,21 @@ function AppInner() {
     if (!meta) return;
 
     const handler = (e) => {
+      // Escape closes any overlay
+      if (e.key === 'Escape' && helpOpen) {
+        e.preventDefault();
+        setHelpOpen(false);
+        return;
+      }
+
       const tag = e.target.tagName;
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
       if (navOpenRef.current) return;
 
-      if (e.key === '/') {
+      if (e.key === '?') {
+        e.preventDefault();
+        setHelpOpen(prev => !prev);
+      } else if (e.key === '/') {
         e.preventDefault();
         setQuickNavOpen(true);
       } else if (e.key === 'B') {
@@ -145,7 +156,7 @@ function AppInner() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [meta, toggleTheme, increaseFontSize, decreaseFontSize, resetFontSize]);
+  }, [meta, helpOpen, toggleTheme, increaseFontSize, decreaseFontSize, resetFontSize]);
 
   // Display error state from context
   if (error) {
@@ -178,6 +189,44 @@ function AppInner() {
             onNavigate={handleQuickNavigate}
             onClose={closeBookmarks}
           />
+        )}
+        {helpOpen && (
+          <div className="help-overlay" onClick={() => setHelpOpen(false)}>
+            <div className="help-panel" onClick={(e) => e.stopPropagation()}>
+              <div className="help-header">
+                <span className="help-title">Keyboard Shortcuts</span>
+                <button className="nav-close" onClick={() => setHelpOpen(false)} aria-label="Close help">&times;</button>
+              </div>
+              <div className="help-body">
+                <div className="help-section">
+                  <div className="help-section-title">Navigation</div>
+                  <div className="help-row"><kbd>/</kbd><span>Quick navigation</span></div>
+                  <div className="help-row"><kbd>&larr;</kbd> <kbd>&rarr;</kbd><span>Previous / next chapter</span></div>
+                  <div className="help-row"><kbd>b</kbd><span>Go back in cross-ref trail</span></div>
+                  <div className="help-row"><kbd>Esc</kbd><span>Close overlay</span></div>
+                </div>
+                <div className="help-section">
+                  <div className="help-section-title">Verse Actions</div>
+                  <div className="help-row"><kbd>c</kbd><span>Copy verse text</span></div>
+                  <div className="help-row"><kbd>s</kbd><span>Copy share link</span></div>
+                  <div className="help-row"><kbd>m</kbd><span>Toggle bookmark</span></div>
+                  <div className="help-row"><kbd>n</kbd><span>Edit note</span></div>
+                </div>
+                <div className="help-section">
+                  <div className="help-section-title">Display</div>
+                  <div className="help-row"><kbd>d</kbd><span>Toggle dark mode</span></div>
+                  <div className="help-row"><kbd>w</kbd><span>Word frequency patterns</span></div>
+                  <div className="help-row"><kbd>+</kbd> <kbd>-</kbd><span>Font size</span></div>
+                  <div className="help-row"><kbd>0</kbd><span>Reset font size</span></div>
+                </div>
+                <div className="help-section">
+                  <div className="help-section-title">Collections</div>
+                  <div className="help-row"><kbd>B</kbd><span>Open bookmarks</span></div>
+                  <div className="help-row"><kbd>?</kbd><span>This help</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </>
