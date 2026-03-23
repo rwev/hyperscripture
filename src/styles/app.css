@@ -299,6 +299,12 @@
   color: var(--text-faint);
   margin-bottom: var(--space-lg);
   line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.chapter-heading:hover {
+  color: var(--accent);
 }
 
 .chapter-text {

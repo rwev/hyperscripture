@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import Verse from './Verse';
 
 /**
@@ -22,6 +22,15 @@ const Chapter = memo(function Chapter({
 }) {
   const isSelectedChapter = selectedBook === bookAbbr && selectedChapter === chapter;
 
+  const scrollToTop = useCallback((e) => {
+    const section = e.target.closest('.chapter');
+    const scroller = section?.closest('.reader-scroll');
+    if (section && scroller) {
+      const offset = section.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+      scroller.scrollTop += offset - 20;
+    }
+  }, []);
+
   return (
     <section
       className="chapter"
@@ -31,7 +40,18 @@ const Chapter = memo(function Chapter({
       {showBookHeading && (
         <h2 className="book-heading">{bookName}</h2>
       )}
-      <h3 className="chapter-heading">
+      <h3
+        className="chapter-heading"
+        onClick={scrollToTop}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            scrollToTop(e);
+          }
+        }}
+      >
         {chapter}
       </h3>
       <div className="chapter-text">
