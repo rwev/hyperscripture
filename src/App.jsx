@@ -9,6 +9,7 @@ import QuickNav from './components/QuickNav';
 import Bookmarks from './components/Bookmarks';
 import { makeVerseId } from './utils/bible';
 import { scrollToVerse } from './utils/scroll';
+import { exportUserData } from './utils/userdata';
 
 // ── Theme persistence ─────────────────────────────────────────────────
 
@@ -164,6 +165,9 @@ function AppInner() {
       } else if (e.key === 'B') {
         e.preventDefault();
         setBookmarksOpen(true);
+      } else if (e.key === 'E') {
+        e.preventDefault();
+        exportUserData();
       } else if (e.key === 'd' && !e.metaKey && !e.ctrlKey) {
         toggleTheme();
       } else if ((e.key === '+' || e.key === '=') && !e.metaKey && !e.ctrlKey) {
@@ -248,6 +252,7 @@ function AppInner() {
                 <div className="help-section">
                   <div className="help-section-title">Collections</div>
                   <div className="help-row"><kbd>B</kbd><span>Open bookmarks</span></div>
+                  <div className="help-row"><kbd>E</kbd><span>Export data backup</span></div>
                   <div className="help-row"><kbd>?</kbd><span>This help</span></div>
                 </div>
               </div>

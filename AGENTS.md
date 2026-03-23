@@ -73,6 +73,7 @@ src/
     fuzzyBook.js              # Fuzzy book name matching + alias table
     recent.js                 # Recently visited passages (localStorage)
     scroll.js                 # scrollToVerse utility with retry/highlight/cancellation
+    userdata.js               # Export/import all localStorage data as JSON backup
     votd.js                   # Verse-of-the-day: curated list, day-of-year selection
     wordfreq.js               # Word frequency analysis + CSS Highlight API integration
   styles/
@@ -202,6 +203,7 @@ Both skip handling when focus is in `INPUT`/`SELECT`/`TEXTAREA` elements.
 | `/`       | Open QuickNav                   | No                |
 | `?`       | Toggle keyboard help overlay    | No                |
 | `B`       | Open bookmarks overlay          | No                |
+| `E`       | Export data backup (JSON)       | No                |
 | `d`       | Toggle dark/light mode          | No                |
 | `+` / `-` | Increase/decrease font size     | No                |
 | `0`       | Reset font size                 | No                |

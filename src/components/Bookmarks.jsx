@@ -1,6 +1,7 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useCallback } from 'react';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { getBookByAbbr } from '../utils/bible';
+import { importUserData } from '../utils/userdata';
 
 /**
  * Parse a verse ID like "Gen.1.1" into { book, chapter, verse }.
@@ -39,7 +40,32 @@ function formatCitation(id) {
 const Bookmarks = memo(function Bookmarks({ onNavigate, onClose }) {
   const { bookmarks, toggle } = useBookmarks();
   const overlayRef = useRef(null);
+  const fileInputRef = useRef(null);
   const entries = [...bookmarks].map(id => ({ id, ...parseVerseId(id) })).filter(e => e.book);
+
+  const handleImport = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        const count = importUserData(data);
+        if (count > 0) {
+          // Reload to pick up imported data in all hooks
+          window.location.reload();
+        }
+      } catch {
+        // Invalid JSON; ignore
+      }
+    };
+    reader.readAsText(file);
+  }, []);
 
   useEffect(() => {
     const handler = (e) => {
@@ -92,6 +118,18 @@ const Bookmarks = memo(function Bookmarks({ onNavigate, onClose }) {
             ))}
           </div>
         )}
+        <div className="bookmarks-footer">
+          <button className="bookmarks-import-btn" onClick={handleImport}>
+            Import backup
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
+        </div>
       </div>
     </div>
   );
