@@ -61,6 +61,29 @@ function AppInner() {
   // Keep ref in sync to avoid reinstalling the keydown listener on navOpen changes
   useEffect(() => { navOpenRef.current = navOpen; }, [navOpen]);
 
+  // ── First-run hint ──────────────────────────────────────────────────
+
+  const [showHint, setShowHint] = useState(() => {
+    try { return !localStorage.getItem('hyperscripture:hint-seen'); }
+    catch { return false; }
+  });
+
+  useEffect(() => {
+    if (!showHint) return;
+
+    const dismiss = () => {
+      setShowHint(false);
+      try { localStorage.setItem('hyperscripture:hint-seen', '1'); } catch { /* ignore */ }
+    };
+
+    const timer = setTimeout(dismiss, 6000);
+    document.addEventListener('keydown', dismiss, { once: true });
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('keydown', dismiss);
+    };
+  }, [showHint]);
+
   // ── Theme ─────────────────────────────────────────────────────────────
 
   const [theme, setTheme] = useState(getInitialTheme);
@@ -229,6 +252,11 @@ function AppInner() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+        {showHint && (
+          <div className="onboarding-hint" aria-live="polite">
+            Press <kbd>?</kbd> for keyboard shortcuts
           </div>
         )}
       </div>

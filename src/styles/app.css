@@ -1186,6 +1186,42 @@
   background: var(--highlight-flash);
 }
 
+/* ── Onboarding Hint ──────────────────────────────────────────────── */
+
+.onboarding-hint {
+  position: fixed;
+  bottom: var(--space-lg);
+  right: var(--space-lg);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: var(--popover-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: var(--space-xs) var(--space-md);
+  box-shadow: 0 2px 12px var(--shadow);
+  z-index: 10;
+  pointer-events: none;
+  animation: hint-lifecycle 6s ease both;
+}
+
+.onboarding-hint kbd {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+@keyframes hint-lifecycle {
+  0% { opacity: 0; transform: translateY(8px); }
+  8% { opacity: 1; transform: translateY(0); }
+  75% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(0); }
+}
+
 /* ── Help Overlay ─────────────────────────────────────────────────── */
 
 .help-overlay {
@@ -1312,6 +1348,7 @@
   .nav-overlay,
   .quicknav-overlay,
   .help-overlay,
+  .onboarding-hint,
   .scroll-sentinel,
   .reader-scroll::before {
     display: none !important;
