@@ -202,6 +202,7 @@ function AppInner() {
                   <div className="help-section-title">Navigation</div>
                   <div className="help-row"><kbd>/</kbd><span>Quick navigation</span></div>
                   <div className="help-row"><kbd>&larr;</kbd> <kbd>&rarr;</kbd><span>Previous / next chapter</span></div>
+                  <div className="help-row"><kbd>f</kbd><span>Search in text</span></div>
                   <div className="help-row"><kbd>b</kbd><span>Go back in cross-ref trail</span></div>
                   <div className="help-row"><kbd>Esc</kbd><span>Close overlay</span></div>
                 </div>

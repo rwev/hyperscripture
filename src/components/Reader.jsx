@@ -398,6 +398,107 @@ export default function Reader() {
     setNoteEditing(null);
   }, [noteEditing, setNote]);
 
+  // ── Text search ───────────────────────────────────────────────────
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchMatchCount, setSearchMatchCount] = useState(0);
+  const [searchCurrentIndex, setSearchCurrentIndex] = useState(0);
+  const searchRangesRef = useRef([]);
+  const searchInputRef = useRef(null);
+
+  const openSearch = useCallback(() => {
+    if (!isHighlightSupported()) {
+      showToast('Search not supported in this browser');
+      return;
+    }
+    setSearchOpen(true);
+    setSearchQuery('');
+    setSearchMatchCount(0);
+    setSearchCurrentIndex(0);
+  }, [showToast]);
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setSearchQuery('');
+    setSearchMatchCount(0);
+    setSearchCurrentIndex(0);
+    searchRangesRef.current = [];
+    CSS.highlights.delete('search-match');
+    CSS.highlights.delete('search-current');
+  }, []);
+
+  const applySearchHighlights = useCallback((query) => {
+    CSS.highlights.delete('search-match');
+    CSS.highlights.delete('search-current');
+    searchRangesRef.current = [];
+
+    if (!query || query.length < 2 || !contentRef.current) {
+      setSearchMatchCount(0);
+      setSearchCurrentIndex(0);
+      return;
+    }
+
+    const lower = query.toLowerCase();
+    const walker = document.createTreeWalker(contentRef.current, NodeFilter.SHOW_TEXT);
+    const ranges = [];
+    let node;
+
+    while ((node = walker.nextNode())) {
+      const text = node.textContent.toLowerCase();
+      let idx = text.indexOf(lower);
+      while (idx !== -1) {
+        try {
+          const range = new Range();
+          range.setStart(node, idx);
+          range.setEnd(node, idx + query.length);
+          ranges.push(range);
+        } catch {
+          // Node boundary issue; skip
+        }
+        idx = text.indexOf(lower, idx + 1);
+      }
+    }
+
+    searchRangesRef.current = ranges;
+    setSearchMatchCount(ranges.length);
+
+    if (ranges.length > 0) {
+      CSS.highlights.set('search-match', new Highlight(...ranges));
+      setSearchCurrentIndex(0);
+      CSS.highlights.set('search-current', new Highlight(ranges[0]));
+    }
+  }, []);
+
+  const scrollToSearchMatch = useCallback((index) => {
+    const ranges = searchRangesRef.current;
+    if (ranges.length === 0) return;
+    const wrappedIndex = ((index % ranges.length) + ranges.length) % ranges.length;
+    setSearchCurrentIndex(wrappedIndex);
+
+    // Update current highlight
+    CSS.highlights.set('search-current', new Highlight(ranges[wrappedIndex]));
+
+    // Scroll the match into view
+    const range = ranges[wrappedIndex];
+    const el = range.startContainer.parentElement;
+    if (el && scrollRef.current) {
+      const containerRect = scrollRef.current.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      if (elRect.top < containerRect.top || elRect.bottom > containerRect.bottom) {
+        scrollRef.current.scrollTop += elRect.top - containerRect.top - containerRect.height / 3;
+      }
+    }
+  }, []);
+
+  // Re-apply highlights when blocks change while search is open
+  useEffect(() => {
+    if (searchOpen && searchQuery.length >= 2) {
+      const timer = setTimeout(() => applySearchHighlights(searchQuery), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [blocks, searchOpen, searchQuery, applySearchHighlights]);
+
   // ── Word frequency highlighting ────────────────────────────────────
 
   const [wordFreqOn, setWordFreqOn] = useState(false);
@@ -525,6 +626,12 @@ export default function Reader() {
         return;
       }
 
+      if (e.key === 'f' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        openSearch();
+        return;
+      }
+
       if (e.key === 'w' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         toggleWordFreq();
@@ -558,7 +665,7 @@ export default function Reader() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [navigate, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, openNoteEditor, toggleWordFreq, navigateBack]);
+  }, [navigate, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, openNoteEditor, openSearch, toggleWordFreq, navigateBack]);
 
   // ── Get cross-refs for selected verse ────────────────────────────────
 
@@ -592,6 +699,47 @@ export default function Reader() {
           loading={priorLoading}
           onNavigate={handleCrossRefNavigate}
         />
+      )}
+
+      {searchOpen && (
+        <div className="search-bar">
+          <input
+            ref={searchInputRef}
+            className="search-bar-input"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              const q = e.target.value;
+              setSearchQuery(q);
+              applySearchHighlights(q);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                closeSearch();
+              } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                  scrollToSearchMatch(searchCurrentIndex - 1);
+                } else {
+                  scrollToSearchMatch(searchCurrentIndex + 1);
+                }
+              }
+            }}
+            placeholder="Search in text..."
+            autoFocus
+            spellCheck={false}
+            autoComplete="off"
+          />
+          {searchQuery.length >= 2 && (
+            <span className="search-bar-count">
+              {searchMatchCount > 0
+                ? `${searchCurrentIndex + 1} / ${searchMatchCount}`
+                : 'No matches'}
+            </span>
+          )}
+          <button className="search-bar-close" onClick={closeSearch} aria-label="Close search">&times;</button>
+        </div>
       )}
 
       {trailLength > 0 && (
