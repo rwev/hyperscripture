@@ -349,6 +349,57 @@ export default function Reader() {
     });
   }, [showToast]);
 
+  // ── Cross-reference navigation (navigate + re-select) ───────────────
+
+  const handleCrossRefNavigate = useCallback((targetBook, targetChapter, targetVerse) => {
+    // Push current position onto breadcrumb trail before following the ref
+    const sv = selectedVerseRef.current;
+    const currentBook = bookRef.current;
+    const currentChapter = chapterRef.current;
+    if (currentBook) {
+      trailRef.current = [...trailRef.current, {
+        book: sv?.book ?? currentBook,
+        chapter: sv?.chapter ?? currentChapter,
+        verse: sv?.verse ?? null,
+      }];
+      setTrailLength(trailRef.current.length);
+    }
+
+    // Cancel any previous scroll attempt
+    if (scrollCancelRef.current) {
+      scrollCancelRef.current();
+    }
+
+    navigate(targetBook, targetChapter);
+    const cancel = scrollToVerse(makeVerseId(targetBook, targetChapter, targetVerse), {
+      onFound: () => {
+        setTimeout(() => selectVerse(targetBook, targetChapter, targetVerse), 100);
+      },
+    });
+    scrollCancelRef.current = cancel;
+  }, [navigate, selectVerse]);
+
+  const navigateBack = useCallback(() => {
+    if (trailRef.current.length === 0) return;
+    const prev = trailRef.current[trailRef.current.length - 1];
+    trailRef.current = trailRef.current.slice(0, -1);
+    setTrailLength(trailRef.current.length);
+
+    if (scrollCancelRef.current) {
+      scrollCancelRef.current();
+    }
+
+    navigate(prev.book, prev.chapter);
+    if (prev.verse) {
+      const cancel = scrollToVerse(makeVerseId(prev.book, prev.chapter, prev.verse), {
+        onFound: () => {
+          setTimeout(() => selectVerse(prev.book, prev.chapter, prev.verse), 100);
+        },
+      });
+      scrollCancelRef.current = cancel;
+    }
+  }, [navigate, selectVerse]);
+
   // ── Keyboard navigation (uses refs to avoid listener churn) ──────────
 
   useEffect(() => {
@@ -401,57 +452,6 @@ export default function Reader() {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [navigate, copySelectedVerse, shareSelectedVerse, navigateBack]);
-
-  // ── Cross-reference navigation (navigate + re-select) ───────────────
-
-  const handleCrossRefNavigate = useCallback((targetBook, targetChapter, targetVerse) => {
-    // Push current position onto breadcrumb trail before following the ref
-    const sv = selectedVerseRef.current;
-    const currentBook = bookRef.current;
-    const currentChapter = chapterRef.current;
-    if (currentBook) {
-      trailRef.current = [...trailRef.current, {
-        book: sv?.book ?? currentBook,
-        chapter: sv?.chapter ?? currentChapter,
-        verse: sv?.verse ?? null,
-      }];
-      setTrailLength(trailRef.current.length);
-    }
-
-    // Cancel any previous scroll attempt
-    if (scrollCancelRef.current) {
-      scrollCancelRef.current();
-    }
-
-    navigate(targetBook, targetChapter);
-    const cancel = scrollToVerse(makeVerseId(targetBook, targetChapter, targetVerse), {
-      onFound: () => {
-        setTimeout(() => selectVerse(targetBook, targetChapter, targetVerse), 100);
-      },
-    });
-    scrollCancelRef.current = cancel;
-  }, [navigate, selectVerse]);
-
-  const navigateBack = useCallback(() => {
-    if (trailRef.current.length === 0) return;
-    const prev = trailRef.current[trailRef.current.length - 1];
-    trailRef.current = trailRef.current.slice(0, -1);
-    setTrailLength(trailRef.current.length);
-
-    if (scrollCancelRef.current) {
-      scrollCancelRef.current();
-    }
-
-    navigate(prev.book, prev.chapter);
-    if (prev.verse) {
-      const cancel = scrollToVerse(makeVerseId(prev.book, prev.chapter, prev.verse), {
-        onFound: () => {
-          setTimeout(() => selectVerse(prev.book, prev.chapter, prev.verse), 100);
-        },
-      });
-      scrollCancelRef.current = cancel;
-    }
-  }, [navigate, selectVerse]);
 
   // ── Get cross-refs for selected verse ────────────────────────────────
 
