@@ -3,7 +3,7 @@ import { useReader } from '../context/ReaderContext';
 import { useBibleText } from '../hooks/useBibleText';
 import { useCrossRefs } from '../hooks/useCrossRefs';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import { getBookByAbbr, getNextBook, getPrevBook, makeVerseId } from '../utils/bible';
+import { getBookByAbbr, getNextBook, getPrevBook, makeVerseId, bookAbbrToSlug } from '../utils/bible';
 import { scrollToVerse } from '../utils/scroll';
 import Chapter from './Chapter';
 import { useCrossRefColumns, PriorColumn, LaterColumn } from './CrossRefColumns';
@@ -293,10 +293,18 @@ export default function Reader() {
     return () => scrollEl.removeEventListener('scroll', handler);
   }, [initialScrollDone, setChapter]);
 
-  // ── Copy verse to clipboard ─────────────────────────────────────────
+  // ── Toast (shared by copy and share) ────────────────────────────────
 
-  const [copyToast, setCopyToast] = useState(null);
-  const copyTimerRef = useRef(null);
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
+
+  const showToast = useCallback((message) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast(message);
+    toastTimerRef.current = setTimeout(() => setToast(null), 2000);
+  }, []);
+
+  // ── Copy verse to clipboard ─────────────────────────────────────────
 
   const copySelectedVerse = useCallback(() => {
     const sv = selectedVerseRef.current;
@@ -317,13 +325,29 @@ export default function Reader() {
     const text = `${verseData.t}\n— ${citation} (${translation})`;
 
     navigator.clipboard.writeText(text).then(() => {
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
-      setCopyToast(citation);
-      copyTimerRef.current = setTimeout(() => setCopyToast(null), 2000);
+      showToast(`Copied ${citation}`);
     }).catch(() => {
       // Clipboard API unavailable; degrade silently
     });
-  }, [translation]);
+  }, [translation, showToast]);
+
+  // ── Share verse link ──────────────────────────────────────────────────
+
+  const shareSelectedVerse = useCallback(() => {
+    const sv = selectedVerseRef.current;
+    if (!sv) return;
+
+    const hash = `#/${bookAbbrToSlug(sv.book)}/${sv.chapter}/${sv.verse}`;
+    const url = `${window.location.origin}${window.location.pathname}${hash}`;
+
+    navigator.clipboard.writeText(url).then(() => {
+      const bookMeta = getBookByAbbr(sv.book);
+      const bookName = bookMeta ? bookMeta.name : sv.book;
+      showToast(`Link copied — ${bookName} ${sv.chapter}:${sv.verse}`);
+    }).catch(() => {
+      // Clipboard API unavailable; degrade silently
+    });
+  }, [showToast]);
 
   // ── Keyboard navigation (uses refs to avoid listener churn) ──────────
 
@@ -337,6 +361,14 @@ export default function Reader() {
         if (selectedVerseRef.current) {
           e.preventDefault();
           copySelectedVerse();
+        }
+        return;
+      }
+
+      if (e.key === 's' && !e.metaKey && !e.ctrlKey) {
+        if (selectedVerseRef.current) {
+          e.preventDefault();
+          shareSelectedVerse();
         }
         return;
       }
@@ -368,7 +400,7 @@ export default function Reader() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [navigate, copySelectedVerse, navigateBack]);
+  }, [navigate, copySelectedVerse, shareSelectedVerse, navigateBack]);
 
   // ── Cross-reference navigation (navigate + re-select) ───────────────
 
@@ -515,9 +547,9 @@ export default function Reader() {
         />
       )}
 
-      {copyToast && (
-        <div className="copy-toast" key={copyToast}>
-          Copied {copyToast}
+      {toast && (
+        <div className="copy-toast" key={toast}>
+          {toast}
         </div>
       )}
     </div>
