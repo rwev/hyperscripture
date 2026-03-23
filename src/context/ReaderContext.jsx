@@ -7,7 +7,7 @@ import { loadMeta } from '../utils/bible';
 const StableContext = createContext(null);
 const StateContext = createContext(null);
 
-const initialState = {
+export const initialState = {
   meta: null,
   loading: true,
   error: null,
@@ -19,7 +19,7 @@ const initialState = {
   navId: 0,
 };
 
-function reducer(state, action) {
+export function reducer(state, action) {
   switch (action.type) {
     case 'META_LOADED':
       return { ...state, meta: action.meta, loading: false };

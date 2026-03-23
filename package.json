@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "data": "node scripts/process-data.mjs",
     "data:bg": "python3 scripts/download-biblegateway.py",
-    "setup": "node scripts/process-data.mjs && python3 scripts/download-biblegateway.py && vite build"
+    "setup": "node scripts/process-data.mjs && python3 scripts/download-biblegateway.py && vite build",
+    "test": "vitest run"
   },
   "dependencies": {
     "react": "^19.2.4",
@@ -17,6 +18,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.0",
@@ -24,6 +27,8 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
-    "vite": "^8.0.0"
+    "jsdom": "^29.0.1",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.1"
   }
 }
