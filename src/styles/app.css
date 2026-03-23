@@ -749,6 +749,11 @@
   margin-bottom: 2px;
 }
 
+.crossref-chain {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
 .crossref-entry-text {
   display: block;
   font-family: var(--font-serif);

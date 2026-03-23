@@ -3,12 +3,14 @@ import { useMemo, useEffect, useRef, memo } from 'react';
 import { formatReference, parseReference } from '../utils/bible';
 import { partitionRefs } from '../utils/crossref';
 import { useRefTexts } from '../hooks/useRefTexts';
+import { useCrossRefs } from '../hooks/useCrossRefs';
 import { useReader } from '../context/ReaderContext';
 
 /**
  * A single reference entry in a column.
+ * Shows a subtle depth indicator (›) if the target verse itself has cross-references.
  */
-const RefEntry = memo(function RefEntry({ refId, text, loading, onNavigate }) {
+const RefEntry = memo(function RefEntry({ refId, text, loading, hasChain, onNavigate }) {
   return (
     <li className="crossref-entry">
       <button
@@ -18,7 +20,10 @@ const RefEntry = memo(function RefEntry({ refId, text, loading, onNavigate }) {
           if (parsed) onNavigate(parsed.book, parsed.chapter, parsed.verseStart);
         }}
       >
-        <span className="crossref-entry-label">{formatReference(refId)}</span>
+        <span className="crossref-entry-label">
+          {formatReference(refId)}
+          {hasChain && <span className="crossref-chain" title="Has further references"> ›</span>}
+        </span>
         {text ? (
           <span className="crossref-entry-text">{text}</span>
         ) : loading ? (
@@ -34,6 +39,7 @@ const RefEntry = memo(function RefEntry({ refId, text, loading, onNavigate }) {
  */
 const RefColumn = memo(function RefColumn({ direction, entries, texts, loading, onNavigate }) {
   const scrollRef = useRef(null);
+  const { getRefsForVerse } = useCrossRefs();
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -55,15 +61,23 @@ const RefColumn = memo(function RefColumn({ direction, entries, texts, loading, 
         </div>
       ) : (
         <ul className="crossref-col-list">
-          {entries.map(({ ref }) => (
-            <RefEntry
-              key={ref}
-              refId={ref}
-              text={texts[ref]}
-              loading={loading}
-              onNavigate={onNavigate}
-            />
-          ))}
+          {entries.map(({ ref }) => {
+            // Check if the target verse has its own cross-refs (one-hop depth check)
+            const parsed = parseReference(ref);
+            const hasChain = parsed
+              ? getRefsForVerse(parsed.book, parsed.chapter, parsed.verseStart).length > 0
+              : false;
+            return (
+              <RefEntry
+                key={ref}
+                refId={ref}
+                text={texts[ref]}
+                loading={loading}
+                hasChain={hasChain}
+                onNavigate={onNavigate}
+              />
+            );
+          })}
         </ul>
       )}
     </aside>
