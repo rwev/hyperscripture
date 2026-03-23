@@ -64,6 +64,7 @@ src/
     useMediaQuery.js          # CSS media query hook (useSyncExternalStore)
     useNotes.js               # localStorage-backed verse notes (Map)
     useParallelText.js        # Load alternate-translation verses for parallel view
+    useReaderKeys.js          # Keyboard shortcuts + touch swipe for Reader
     useRefTexts.js            # Batch-load verse texts for cross-ref display
     useTextSearch.js          # CSS Highlight API text search with match cycling
     useWordFreq.js            # CSS Highlight API word frequency highlighting
