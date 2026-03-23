@@ -46,6 +46,10 @@ export default function Reader() {
   const selectedVerseRef = useRef(selectedVerse);
   const scrollCancelRef = useRef(null);
 
+  // ── Cross-reference breadcrumb trail ──────────────────────────────
+  const trailRef = useRef([]);
+  const [trailLength, setTrailLength] = useState(0);
+
   // Refs for keyboard handler and initial-load effect to avoid listener/effect churn
   const bookRef = useRef(book);
   const chapterRef = useRef(chapter);
@@ -337,6 +341,11 @@ export default function Reader() {
         return;
       }
 
+      if (e.key === 'b' && !e.metaKey && !e.ctrlKey) {
+        navigateBack();
+        return;
+      }
+
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
         if (ch > 1) {
@@ -359,11 +368,24 @@ export default function Reader() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [navigate, copySelectedVerse]);
+  }, [navigate, copySelectedVerse, navigateBack]);
 
   // ── Cross-reference navigation (navigate + re-select) ───────────────
 
   const handleCrossRefNavigate = useCallback((targetBook, targetChapter, targetVerse) => {
+    // Push current position onto breadcrumb trail before following the ref
+    const sv = selectedVerseRef.current;
+    const currentBook = bookRef.current;
+    const currentChapter = chapterRef.current;
+    if (currentBook) {
+      trailRef.current = [...trailRef.current, {
+        book: sv?.book ?? currentBook,
+        chapter: sv?.chapter ?? currentChapter,
+        verse: sv?.verse ?? null,
+      }];
+      setTrailLength(trailRef.current.length);
+    }
+
     // Cancel any previous scroll attempt
     if (scrollCancelRef.current) {
       scrollCancelRef.current();
@@ -376,6 +398,27 @@ export default function Reader() {
       },
     });
     scrollCancelRef.current = cancel;
+  }, [navigate, selectVerse]);
+
+  const navigateBack = useCallback(() => {
+    if (trailRef.current.length === 0) return;
+    const prev = trailRef.current[trailRef.current.length - 1];
+    trailRef.current = trailRef.current.slice(0, -1);
+    setTrailLength(trailRef.current.length);
+
+    if (scrollCancelRef.current) {
+      scrollCancelRef.current();
+    }
+
+    navigate(prev.book, prev.chapter);
+    if (prev.verse) {
+      const cancel = scrollToVerse(makeVerseId(prev.book, prev.chapter, prev.verse), {
+        onFound: () => {
+          setTimeout(() => selectVerse(prev.book, prev.chapter, prev.verse), 100);
+        },
+      });
+      scrollCancelRef.current = cancel;
+    }
   }, [navigate, selectVerse]);
 
   // ── Get cross-refs for selected verse ────────────────────────────────
@@ -410,6 +453,20 @@ export default function Reader() {
           loading={priorLoading}
           onNavigate={handleCrossRefNavigate}
         />
+      )}
+
+      {trailLength > 0 && (
+        <button
+          className="trail-back"
+          onClick={navigateBack}
+          aria-label={`Go back (${trailLength} step${trailLength !== 1 ? 's' : ''} in trail)`}
+          title="Go back (b)"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <polyline points="7,2 3,6 7,10" />
+          </svg>
+          {trailLength > 1 && <span className="trail-depth">{trailLength}</span>}
+        </button>
       )}
 
       <div className="reader-scroll" ref={scrollRef}>
