@@ -131,7 +131,7 @@
   background: var(--popover-bg);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 8px 40px rgba(40, 30, 20, 0.15), 0 2px 8px rgba(40, 30, 20, 0.08);
+  box-shadow: 0 8px 40px var(--shadow), 0 2px 8px var(--shadow);
   overflow: hidden;
   animation: quicknav-palette-in 0.15s ease-out;
 }
@@ -832,7 +832,7 @@
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: var(--space-xs) var(--space-md);
-  box-shadow: 0 2px 12px rgba(40, 30, 20, 0.1);
+  box-shadow: 0 2px 12px var(--shadow);
   pointer-events: none;
   z-index: 60;
   animation: toast-in-out 2s ease both;

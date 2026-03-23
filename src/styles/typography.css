@@ -44,6 +44,26 @@
   --col-width: 18rem;
 }
 
+/* ── Dark palette ──────────────────────────────────────────────────── */
+
+[data-theme="dark"] {
+  --bg: #1a1612;
+  --bg-panel: #211d18;
+  --bg-overlay: rgba(26, 22, 18, 0.97);
+  --text: #d8d0c4;
+  --text-muted: #9a9080;
+  --text-faint: #706658;
+  --accent: #c4aa7e;
+  --accent-hover: #ddc49e;
+  --border: #332d25;
+  --highlight: rgba(210, 180, 120, 0.12);
+  --highlight-flash: rgba(210, 180, 120, 0.25);
+  --ref-indicator: #b89a6e;
+  --popover-bg: #252018;
+  --shadow: rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
+}
+
 body {
   font-family: var(--font-serif);
   font-size: var(--text-base);

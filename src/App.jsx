@@ -9,6 +9,24 @@ import QuickNav from './components/QuickNav';
 import { makeVerseId } from './utils/bible';
 import { scrollToVerse } from './utils/scroll';
 
+// ── Theme persistence ─────────────────────────────────────────────────
+
+const THEME_KEY = 'hyperscripture:theme';
+
+/**
+ * Resolve the initial theme: saved preference > system preference > light.
+ */
+function getInitialTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch {
+    // localStorage unavailable
+  }
+  if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'dark';
+  return 'light';
+}
+
 /**
  * Inner app shell that consumes ReaderProvider context.
  * Manages QuickNav overlay and global keyboard shortcuts.
@@ -20,6 +38,20 @@ function AppInner() {
 
   // Keep ref in sync to avoid reinstalling the keydown listener on navOpen changes
   useEffect(() => { navOpenRef.current = navOpen; }, [navOpen]);
+
+  // ── Theme ─────────────────────────────────────────────────────────────
+
+  const [theme, setTheme] = useState(getInitialTheme);
+
+  // Apply theme attribute to <html> and persist
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ }
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(t => t === 'dark' ? 'light' : 'dark');
+  }, []);
 
   const openQuickNav = useCallback(() => {
     setQuickNavOpen(true);
@@ -36,7 +68,7 @@ function AppInner() {
     }
   }, [navigate]);
 
-  // Global `/` key listener (uses ref to avoid listener churn)
+  // Global keyboard shortcuts (uses ref to avoid listener churn)
   useEffect(() => {
     if (!meta) return;
 
@@ -48,12 +80,14 @@ function AppInner() {
       if (e.key === '/') {
         e.preventDefault();
         setQuickNavOpen(true);
+      } else if (e.key === 'd' && !e.metaKey && !e.ctrlKey) {
+        toggleTheme();
       }
     };
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [meta]);
+  }, [meta, toggleTheme]);
 
   // Display error state from context
   if (error) {
