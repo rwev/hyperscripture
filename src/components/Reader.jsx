@@ -5,9 +5,10 @@ import { useBookmarks } from '../hooks/useBookmarks';
 import { useCrossRefs } from '../hooks/useCrossRefs';
 import { useNotes } from '../hooks/useNotes';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useTextSearch } from '../hooks/useTextSearch';
+import { useWordFreq } from '../hooks/useWordFreq';
 import { getBookByAbbr, getNextBook, getPrevBook, makeVerseId, bookAbbrToSlug } from '../utils/bible';
 import { scrollToVerse } from '../utils/scroll';
-import { applyWordFrequencyHighlights, clearWordFrequencyHighlights, isHighlightSupported } from '../utils/wordfreq';
 import Chapter from './Chapter';
 import { useCrossRefColumns, PriorColumn, LaterColumn } from './CrossRefColumns';
 import CrossRefMobile from './CrossRefMobile';
@@ -398,142 +399,20 @@ export default function Reader() {
     setNoteEditing(null);
   }, [noteEditing, setNote]);
 
+  // ── Content ref (shared by search and word frequency) ──────────────
+
+  const contentRef = useRef(null);
+
   // ── Text search ───────────────────────────────────────────────────
 
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchMatchCount, setSearchMatchCount] = useState(0);
-  const [searchCurrentIndex, setSearchCurrentIndex] = useState(0);
-  const searchRangesRef = useRef([]);
-  const searchInputRef = useRef(null);
-
-  const openSearch = useCallback(() => {
-    if (!isHighlightSupported()) {
-      showToast('Search not supported in this browser');
-      return;
-    }
-    setSearchOpen(true);
-    setSearchQuery('');
-    setSearchMatchCount(0);
-    setSearchCurrentIndex(0);
-  }, [showToast]);
-
-  const closeSearch = useCallback(() => {
-    setSearchOpen(false);
-    setSearchQuery('');
-    setSearchMatchCount(0);
-    setSearchCurrentIndex(0);
-    searchRangesRef.current = [];
-    CSS.highlights.delete('search-match');
-    CSS.highlights.delete('search-current');
-  }, []);
-
-  const applySearchHighlights = useCallback((query) => {
-    CSS.highlights.delete('search-match');
-    CSS.highlights.delete('search-current');
-    searchRangesRef.current = [];
-
-    if (!query || query.length < 2 || !contentRef.current) {
-      setSearchMatchCount(0);
-      setSearchCurrentIndex(0);
-      return;
-    }
-
-    const lower = query.toLowerCase();
-    const walker = document.createTreeWalker(contentRef.current, NodeFilter.SHOW_TEXT);
-    const ranges = [];
-    let node;
-
-    while ((node = walker.nextNode())) {
-      const text = node.textContent.toLowerCase();
-      let idx = text.indexOf(lower);
-      while (idx !== -1) {
-        try {
-          const range = new Range();
-          range.setStart(node, idx);
-          range.setEnd(node, idx + query.length);
-          ranges.push(range);
-        } catch {
-          // Node boundary issue; skip
-        }
-        idx = text.indexOf(lower, idx + 1);
-      }
-    }
-
-    searchRangesRef.current = ranges;
-    setSearchMatchCount(ranges.length);
-
-    if (ranges.length > 0) {
-      CSS.highlights.set('search-match', new Highlight(...ranges));
-      setSearchCurrentIndex(0);
-      CSS.highlights.set('search-current', new Highlight(ranges[0]));
-    }
-  }, []);
-
-  const scrollToSearchMatch = useCallback((index) => {
-    const ranges = searchRangesRef.current;
-    if (ranges.length === 0) return;
-    const wrappedIndex = ((index % ranges.length) + ranges.length) % ranges.length;
-    setSearchCurrentIndex(wrappedIndex);
-
-    // Update current highlight
-    CSS.highlights.set('search-current', new Highlight(ranges[wrappedIndex]));
-
-    // Scroll the match into view
-    const range = ranges[wrappedIndex];
-    const el = range.startContainer.parentElement;
-    if (el && scrollRef.current) {
-      const containerRect = scrollRef.current.getBoundingClientRect();
-      const elRect = el.getBoundingClientRect();
-      if (elRect.top < containerRect.top || elRect.bottom > containerRect.bottom) {
-        scrollRef.current.scrollTop += elRect.top - containerRect.top - containerRect.height / 3;
-      }
-    }
-  }, []);
-
-  // Re-apply highlights when blocks change while search is open
-  useEffect(() => {
-    if (searchOpen && searchQuery.length >= 2) {
-      const timer = setTimeout(() => applySearchHighlights(searchQuery), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [blocks, searchOpen, searchQuery, applySearchHighlights]);
+  const {
+    searchOpen, searchQuery, searchMatchCount, searchCurrentIndex,
+    openSearch, closeSearch, searchBarProps,
+  } = useTextSearch(contentRef, scrollRef, blocks, showToast);
 
   // ── Word frequency highlighting ────────────────────────────────────
 
-  const [wordFreqOn, setWordFreqOn] = useState(false);
-  const contentRef = useRef(null);
-
-  const toggleWordFreq = useCallback(() => {
-    if (!isHighlightSupported()) {
-      showToast('Word highlighting not supported in this browser');
-      return;
-    }
-    setWordFreqOn(prev => {
-      showToast(prev ? 'Word patterns off' : 'Word patterns on');
-      return !prev;
-    });
-  }, [showToast]);
-
-  // Apply/clear highlights when toggled or blocks change
-  useEffect(() => {
-    if (!wordFreqOn) {
-      clearWordFrequencyHighlights();
-      return;
-    }
-    // Delay slightly to let DOM settle after block renders
-    const timer = setTimeout(() => {
-      if (contentRef.current) {
-        applyWordFrequencyHighlights(contentRef.current);
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [wordFreqOn, blocks]);
-
-  // Clean up on unmount
-  useEffect(() => {
-    return () => clearWordFrequencyHighlights();
-  }, []);
+  const { toggleWordFreq } = useWordFreq(contentRef, blocks, showToast);
 
   // ── Cross-reference navigation (navigate + re-select) ───────────────
 
@@ -704,28 +583,9 @@ export default function Reader() {
       {searchOpen && (
         <div className="search-bar">
           <input
-            ref={searchInputRef}
             className="search-bar-input"
             type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              const q = e.target.value;
-              setSearchQuery(q);
-              applySearchHighlights(q);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.preventDefault();
-                closeSearch();
-              } else if (e.key === 'Enter') {
-                e.preventDefault();
-                if (e.shiftKey) {
-                  scrollToSearchMatch(searchCurrentIndex - 1);
-                } else {
-                  scrollToSearchMatch(searchCurrentIndex + 1);
-                }
-              }
-            }}
+            {...searchBarProps}
             placeholder="Search in text..."
             autoFocus
             spellCheck={false}
