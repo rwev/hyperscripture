@@ -526,13 +526,36 @@ export default function Reader() {
     }
   }, [navigate, selectVerse]);
 
+  // ── Chapter navigation (shared by keyboard + touch swipe) ──────────
+
+  const navigatePrev = useCallback(() => {
+    const b = bookRef.current;
+    const ch = chapterRef.current;
+    if (ch > 1) {
+      navigate(b, ch - 1);
+    } else {
+      const prev = getPrevBook(b);
+      if (prev) navigate(prev.abbr, prev.chapters);
+    }
+  }, [navigate]);
+
+  const navigateNext = useCallback(() => {
+    const b = bookRef.current;
+    const ch = chapterRef.current;
+    const bookMeta = getBookByAbbr(b);
+    if (bookMeta && ch < bookMeta.chapters) {
+      navigate(b, ch + 1);
+    } else {
+      const next = getNextBook(b);
+      if (next) navigate(next.abbr, 1);
+    }
+  }, [navigate]);
+
   // ── Keyboard navigation (uses refs to avoid listener churn) ──────────
 
   useEffect(() => {
     const handler = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
-      const b = bookRef.current;
-      const ch = chapterRef.current;
 
       if (e.key === 'c' && !e.metaKey && !e.ctrlKey) {
         if (selectedVerseRef.current) {
@@ -600,27 +623,54 @@ export default function Reader() {
 
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        if (ch > 1) {
-          navigate(b, ch - 1);
-        } else {
-          const prev = getPrevBook(b);
-          if (prev) navigate(prev.abbr, prev.chapters);
-        }
+        navigatePrev();
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        const bookMeta = getBookByAbbr(b);
-        if (bookMeta && ch < bookMeta.chapters) {
-          navigate(b, ch + 1);
-        } else {
-          const next = getNextBook(b);
-          if (next) navigate(next.abbr, 1);
-        }
+        navigateNext();
       }
     };
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [navigate, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, openNoteEditor, showToast, toggleParallel, openSearch, toggleWordFreq, navigateBack]);
+  }, [navigatePrev, navigateNext, copySelectedVerse, shareSelectedVerse, bookmarkSelectedVerse, openNoteEditor, showToast, toggleParallel, openSearch, toggleWordFreq, navigateBack]);
+
+  // ── Touch swipe navigation (mobile chapter switching) ─────────────
+
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+
+    let startX = 0;
+    let startY = 0;
+
+    const onTouchStart = (e) => {
+      if (e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    };
+
+    const onTouchEnd = (e) => {
+      if (e.changedTouches.length !== 1) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+
+      // Require horizontal swipe: >80px horizontal, angle < 30° from horizontal
+      if (Math.abs(dx) < 80 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+
+      if (dx > 0) {
+        navigatePrev();
+      } else {
+        navigateNext();
+      }
+    };
+
+    scrollEl.addEventListener('touchstart', onTouchStart, { passive: true });
+    scrollEl.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      scrollEl.removeEventListener('touchstart', onTouchStart);
+      scrollEl.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [navigatePrev, navigateNext]);
 
   // ── Get cross-refs for selected verse ────────────────────────────────
 
