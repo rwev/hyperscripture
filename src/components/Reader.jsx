@@ -651,12 +651,13 @@ export default function Reader() {
             type="text"
             {...searchBarProps}
             placeholder="Search in text..."
+            aria-label="Search in text"
             autoFocus
             spellCheck={false}
             autoComplete="off"
           />
           {searchQuery.length >= 2 && (
-            <span className="search-bar-count">
+            <span className="search-bar-count" aria-live="polite">
               {searchMatchCount > 0
                 ? `${searchCurrentIndex + 1} / ${searchMatchCount}`
                 : 'No matches'}

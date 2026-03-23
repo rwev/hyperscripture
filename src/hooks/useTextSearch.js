@@ -114,6 +114,16 @@ export function useTextSearch(contentRef, scrollRef, blocks, showToast) {
     }
   }, [blocks, searchOpen, searchQuery, applyHighlights]);
 
+  // Clean up highlights on unmount (e.g. if search is open when Reader unmounts)
+  useEffect(() => {
+    return () => {
+      if (isHighlightSupported()) {
+        CSS.highlights.delete('search-match');
+        CSS.highlights.delete('search-current');
+      }
+    };
+  }, []);
+
   /** Props bundle for the search bar input element. */
   const searchBarProps = {
     value: searchQuery,

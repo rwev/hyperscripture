@@ -2,7 +2,7 @@
  * Bookmark persistence hook backed by localStorage.
  *
  * Stores a Set of verse IDs (e.g. "Gen.1.1") and exposes
- * toggle/has/getAll operations. State changes trigger re-renders.
+ * toggle operations. State changes trigger re-renders.
  */
 
 import { useState, useCallback } from 'react';
@@ -40,7 +40,7 @@ function saveBookmarks(bookmarks) {
 
 /**
  * Hook for managing bookmarked verses.
- * @returns {{ bookmarks: Set<string>, toggle: (id: string) => boolean, getAll: () => string[] }}
+ * @returns {{ bookmarks: Set<string>, toggle: (id: string) => boolean }}
  */
 export function useBookmarks() {
   const [bookmarks, setBookmarks] = useState(loadBookmarks);
@@ -61,9 +61,5 @@ export function useBookmarks() {
     return added;
   }, []);
 
-  const getAll = useCallback(() => {
-    return [...bookmarks];
-  }, [bookmarks]);
-
-  return { bookmarks, toggle, getAll };
+  return { bookmarks, toggle };
 }

@@ -2,7 +2,7 @@
  * Note persistence hook backed by localStorage.
  *
  * Stores a Map of verse IDs to note strings and exposes
- * get/set/delete/has operations. State changes trigger re-renders.
+ * get/set operations. State changes trigger re-renders.
  */
 
 import { useState, useCallback } from 'react';
@@ -40,7 +40,7 @@ function saveNotes(notes) {
 
 /**
  * Hook for managing verse notes.
- * @returns {{ notes: Map<string, string>, getNote: (id: string) => string, setNote: (id: string, text: string) => void, deleteNote: (id: string) => void }}
+ * @returns {{ notes: Map<string, string>, getNote: (id: string) => string, setNote: (id: string, text: string) => void }}
  */
 export function useNotes() {
   const [notes, setNotes] = useState(loadNotes);
@@ -62,14 +62,5 @@ export function useNotes() {
     });
   }, []);
 
-  const deleteNote = useCallback((verseId) => {
-    setNotes(prev => {
-      const next = new Map(prev);
-      next.delete(verseId);
-      saveNotes(next);
-      return next;
-    });
-  }, []);
-
-  return { notes, getNote, setNote, deleteNote };
+  return { notes, getNote, setNote };
 }
