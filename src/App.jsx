@@ -27,6 +27,25 @@ function getInitialTheme() {
   return 'light';
 }
 
+// ── Font size persistence ─────────────────────────────────────────────
+
+const FONT_SIZE_KEY = 'hyperscripture:font-size';
+const FONT_STEPS = [1, 1.125, 1.25, 1.375, 1.5, 1.625, 1.75];
+const FONT_DEFAULT_INDEX = 2; // 1.25rem
+
+/**
+ * Resolve the initial font size index from localStorage.
+ */
+function getInitialFontIndex() {
+  try {
+    const saved = parseInt(localStorage.getItem(FONT_SIZE_KEY), 10);
+    if (saved >= 0 && saved < FONT_STEPS.length) return saved;
+  } catch {
+    // localStorage unavailable
+  }
+  return FONT_DEFAULT_INDEX;
+}
+
 /**
  * Inner app shell that consumes ReaderProvider context.
  * Manages QuickNav overlay and global keyboard shortcuts.
@@ -51,6 +70,28 @@ function AppInner() {
 
   const toggleTheme = useCallback(() => {
     setTheme(t => t === 'dark' ? 'light' : 'dark');
+  }, []);
+
+  // ── Font size ───────────────────────────────────────────────────────
+
+  const [fontIndex, setFontIndex] = useState(getInitialFontIndex);
+
+  // Apply font size to <html> as a --text-base override and persist
+  useEffect(() => {
+    document.documentElement.style.setProperty('--text-base', `${FONT_STEPS[fontIndex]}rem`);
+    try { localStorage.setItem(FONT_SIZE_KEY, String(fontIndex)); } catch { /* ignore */ }
+  }, [fontIndex]);
+
+  const increaseFontSize = useCallback(() => {
+    setFontIndex(i => Math.min(i + 1, FONT_STEPS.length - 1));
+  }, []);
+
+  const decreaseFontSize = useCallback(() => {
+    setFontIndex(i => Math.max(i - 1, 0));
+  }, []);
+
+  const resetFontSize = useCallback(() => {
+    setFontIndex(FONT_DEFAULT_INDEX);
   }, []);
 
   const openQuickNav = useCallback(() => {
@@ -82,12 +123,20 @@ function AppInner() {
         setQuickNavOpen(true);
       } else if (e.key === 'd' && !e.metaKey && !e.ctrlKey) {
         toggleTheme();
+      } else if ((e.key === '+' || e.key === '=') && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        increaseFontSize();
+      } else if (e.key === '-' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        decreaseFontSize();
+      } else if (e.key === '0' && !e.metaKey && !e.ctrlKey) {
+        resetFontSize();
       }
     };
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [meta, toggleTheme]);
+  }, [meta, toggleTheme, increaseFontSize, decreaseFontSize, resetFontSize]);
 
   // Display error state from context
   if (error) {
